@@ -1,0 +1,16 @@
+/home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles/install/strip.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles/install/local.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles/install.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles/list_install_components.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles/rebuild_cache.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles/edit_cache.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/install/strip.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/install.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/list_install_components.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/rebuild_cache.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/e2eTest.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/edit_cache.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/pageRankPerformanceTest.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/pageRankCalculationTest.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/install/local.dir
+/home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/sha256Test.dir
