@@ -1,7 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/e2eTest.dir/e2eTest.cpp.o"
-  "e2eTest.pdb"
   "e2eTest"
+  "e2eTest.pdb"
 )
 
 # Per-language clean rules from dependency scanning.
