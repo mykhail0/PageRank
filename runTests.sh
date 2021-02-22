@@ -25,8 +25,8 @@ for i in 1 2 7; do ./tests/e2eTest $i < ./tests/e2eScenario.txt; done
 
 echo ">>>>>>>>> Run tests in RELEASE"
 # Run tests in release config
-cmake -DCMAKE_BUILD_TYPE=Release .
-make
+#cmake -DCMAKE_BUILD_TYPE=Release .
+#make
 
 #./tests/sha256Test
 #./tests/pageRankCalculationTest
