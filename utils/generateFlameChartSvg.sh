@@ -1,4 +1,5 @@
-git clone https://github.com/brendangregg/FlameGraph > /dev/null 2> /dev/null || true
+#!/bin/bash
+#git clone https://github.com/brendangregg/FlameGraph > /dev/null 2> /dev/null || true
 
 input=$1
 output=$2

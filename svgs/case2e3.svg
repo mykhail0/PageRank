@@ -1,0 +1,1784 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="406" onload="init(evt)" viewBox="0 0 1200 406" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+	}
+
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom();
+			zoom(target);
+		}
+		else if (e.target.id == "unzoom") unzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+	}, false)
+
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+		return;
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		// Fit in full text width
+		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+			return;
+
+		for (var x = txt.length - 2; x > 0; x--) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom() {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			update_text(el[i]);
+		}
+		search();
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) {
+				currentSearchTerm = term;
+				search();
+			}
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (currentSearchTerm === null) return;
+		var term = currentSearchTerm;
+
+		var re = new RegExp(term, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="406.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >Flame Graph</text>
+<text id="details" x="10.00" y="389" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="389" > </text>
+<g id="frames">
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="164.9" y="181" width="12.0" height="15.0" fill="rgb(225,226,3)" rx="2" ry="2" />
+<text  x="167.95" y="191.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="594.0" y="245" width="12.0" height="15.0" fill="rgb(207,210,28)" rx="2" ry="2" />
+<text  x="597.04" y="255.5" ></text>
+</g>
+<g >
+<title>std::__invoke_impl&lt;void,void (15 samples, 15.15%)</title><rect x="653.6" y="229" width="178.8" height="15.0" fill="rgb(238,131,40)" rx="2" ry="2" />
+<text  x="656.64" y="239.5" >std::__invoke_impl&lt;void..</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="45.8" y="213" width="11.9" height="15.0" fill="rgb(240,60,38)" rx="2" ry="2" />
+<text  x="48.76" y="223.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="594.0" y="261" width="12.0" height="15.0" fill="rgb(215,224,7)" rx="2" ry="2" />
+<text  x="597.04" y="271.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="21.9" y="245" width="11.9" height="15.0" fill="rgb(236,129,2)" rx="2" ry="2" />
+<text  x="24.92" y="255.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="200.7" y="229" width="11.9" height="15.0" fill="rgb(214,142,10)" rx="2" ry="2" />
+<text  x="203.71" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Big (1 samples, 1.01%)</title><rect x="212.6" y="261" width="11.9" height="15.0" fill="rgb(235,87,32)" rx="2" ry="2" />
+<text  x="215.63" y="271.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="176.9" y="229" width="11.9" height="15.0" fill="rgb(213,49,9)" rx="2" ry="2" />
+<text  x="179.87" y="239.5" ></text>
+</g>
+<g >
+<title>_int_malloc(av=av@entry=0x7f00f6c92c40 (1 samples, 1.01%)</title><rect x="844.3" y="181" width="12.0" height="15.0" fill="rgb(233,2,6)" rx="2" ry="2" />
+<text  x="847.34" y="191.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fefd70, (1 samples, 1.01%)</title><rect x="391.4" y="277" width="11.9" height="15.0" fill="rgb(244,135,20)" rx="2" ry="2" />
+<text  x="394.41" y="287.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fea7f0, (1 samples, 1.01%)</title><rect x="260.3" y="277" width="11.9" height="15.0" fill="rgb(238,105,29)" rx="2" ry="2" />
+<text  x="263.30" y="287.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="570.2" y="229" width="11.9" height="15.0" fill="rgb(215,217,22)" rx="2" ry="2" />
+<text  x="573.20" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="534.4" y="261" width="12.0" height="15.0" fill="rgb(223,192,2)" rx="2" ry="2" />
+<text  x="537.44" y="271.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="379.5" y="261" width="11.9" height="15.0" fill="rgb(232,191,25)" rx="2" ry="2" />
+<text  x="382.49" y="271.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="367.6" y="229" width="11.9" height="15.0" fill="rgb(253,39,50)" rx="2" ry="2" />
+<text  x="370.58" y="239.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="188.8" y="229" width="11.9" height="15.0" fill="rgb(214,174,17)" rx="2" ry="2" />
+<text  x="191.79" y="239.5" ></text>
+</g>
+<g >
+<title>futex_wait_cancelable (5 samples, 5.05%)</title><rect x="892.0" y="213" width="59.6" height="15.0" fill="rgb(234,204,44)" rx="2" ry="2" />
+<text  x="895.02" y="223.5" >futex_..</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="534.4" y="229" width="12.0" height="15.0" fill="rgb(230,141,32)" rx="2" ry="2" />
+<text  x="537.44" y="239.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="81.5" y="197" width="11.9" height="15.0" fill="rgb(254,30,35)" rx="2" ry="2" />
+<text  x="84.52" y="207.5" ></text>
+</g>
+<g >
+<title>MultiThreadedPageRankComputer::generateIds (18 samples, 18.18%)</title><rect x="951.6" y="293" width="214.6" height="15.0" fill="rgb(244,180,48)" rx="2" ry="2" />
+<text  x="954.62" y="303.5" >MultiThreadedPageRankCompute..</text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Odd (1 samples, 1.01%)</title><rect x="606.0" y="261" width="11.9" height="15.0" fill="rgb(211,119,53)" rx="2" ry="2" />
+<text  x="608.96" y="271.5" ></text>
+</g>
+<g >
+<title>__GI___libc_malloc(bytes=65) (1 samples, 1.01%)</title><rect x="164.9" y="149" width="12.0" height="15.0" fill="rgb(205,156,35)" rx="2" ry="2" />
+<text  x="167.95" y="159.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="129.2" y="261" width="11.9" height="15.0" fill="rgb(243,149,50)" rx="2" ry="2" />
+<text  x="132.19" y="271.5" ></text>
+</g>
+<g >
+<title>PageId::PageId (1 samples, 1.01%)</title><rect x="367.6" y="245" width="11.9" height="15.0" fill="rgb(241,112,17)" rx="2" ry="2" />
+<text  x="370.58" y="255.5" ></text>
+</g>
+<g >
+<title>clone() (69 samples, 69.70%)</title><rect x="10.0" y="341" width="822.4" height="15.0" fill="rgb(250,59,28)" rx="2" ry="2" />
+<text  x="13.00" y="351.5" >clone()</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="474.8" y="229" width="12.0" height="15.0" fill="rgb(218,164,47)" rx="2" ry="2" />
+<text  x="477.85" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="224.5" y="261" width="12.0" height="15.0" fill="rgb(212,102,36)" rx="2" ry="2" />
+<text  x="227.55" y="271.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="45.8" y="181" width="11.9" height="15.0" fill="rgb(230,105,1)" rx="2" ry="2" />
+<text  x="48.76" y="191.5" ></text>
+</g>
+<g >
+<title>std::_Hash_bytes(voidconst*, (3 samples, 3.03%)</title><rect x="725.2" y="101" width="35.7" height="15.0" fill="rgb(246,144,54)" rx="2" ry="2" />
+<text  x="728.15" y="111.5" >std..</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="331.8" y="229" width="11.9" height="15.0" fill="rgb(247,105,44)" rx="2" ry="2" />
+<text  x="334.82" y="239.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="629.8" y="197" width="11.9" height="15.0" fill="rgb(230,171,42)" rx="2" ry="2" />
+<text  x="632.80" y="207.5" ></text>
+</g>
+<g >
+<title>__run_fork_handlers(who=who@entry=atfork_run_parent, (1 samples, 1.01%)</title><rect x="105.4" y="229" width="11.9" height="15.0" fill="rgb(237,188,1)" rx="2" ry="2" />
+<text  x="108.35" y="239.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="69.6" y="229" width="11.9" height="15.0" fill="rgb(234,197,41)" rx="2" ry="2" />
+<text  x="72.60" y="239.5" ></text>
+</g>
+<g >
+<title>operatornew(unsigned (1 samples, 1.01%)</title><rect x="81.5" y="165" width="11.9" height="15.0" fill="rgb(226,192,35)" rx="2" ry="2" />
+<text  x="84.52" y="175.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fee090, (1 samples, 1.01%)</title><rect x="355.7" y="277" width="11.9" height="15.0" fill="rgb(241,103,10)" rx="2" ry="2" />
+<text  x="358.66" y="287.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="21.9" y="261" width="11.9" height="15.0" fill="rgb(212,149,6)" rx="2" ry="2" />
+<text  x="24.92" y="271.5" ></text>
+</g>
+<g >
+<title>all (99 samples, 100%)</title><rect x="10.0" y="357" width="1180.0" height="15.0" fill="rgb(222,116,30)" rx="2" ry="2" />
+<text  x="13.00" y="367.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fdf270, (1 samples, 1.01%)</title><rect x="21.9" y="277" width="11.9" height="15.0" fill="rgb(248,168,14)" rx="2" ry="2" />
+<text  x="24.92" y="287.5" ></text>
+</g>
+<g >
+<title>start_thread(arg=&lt;optimized (69 samples, 69.70%)</title><rect x="10.0" y="325" width="822.4" height="15.0" fill="rgb(246,40,16)" rx="2" ry="2" />
+<text  x="13.00" y="335.5" >start_thread(arg=&lt;optimized</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="403.3" y="245" width="12.0" height="15.0" fill="rgb(247,170,24)" rx="2" ry="2" />
+<text  x="406.33" y="255.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="319.9" y="229" width="11.9" height="15.0" fill="rgb(246,187,21)" rx="2" ry="2" />
+<text  x="322.90" y="239.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="343.7" y="245" width="12.0" height="15.0" fill="rgb(222,11,28)" rx="2" ry="2" />
+<text  x="346.74" y="255.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="153.0" y="261" width="11.9" height="15.0" fill="rgb(213,129,18)" rx="2" ry="2" />
+<text  x="156.03" y="271.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (2 samples, 2.02%)</title><rect x="1166.2" y="197" width="23.8" height="15.0" fill="rgb(234,178,49)" rx="2" ry="2" />
+<text  x="1169.16" y="207.5" >s..</text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Little (1 samples, 1.01%)</title><rect x="105.4" y="261" width="11.9" height="15.0" fill="rgb(222,56,7)" rx="2" ry="2" />
+<text  x="108.35" y="271.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="224.5" y="197" width="12.0" height="15.0" fill="rgb(227,133,18)" rx="2" ry="2" />
+<text  x="227.55" y="207.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe5690, (1 samples, 1.01%)</title><rect x="164.9" y="277" width="12.0" height="15.0" fill="rgb(253,133,32)" rx="2" ry="2" />
+<text  x="167.95" y="287.5" ></text>
+</g>
+<g >
+<title>PageIdHash::operator() (3 samples, 3.03%)</title><rect x="725.2" y="149" width="35.7" height="15.0" fill="rgb(253,71,37)" rx="2" ry="2" />
+<text  x="728.15" y="159.5" >Pag..</text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="474.8" y="261" width="12.0" height="15.0" fill="rgb(240,62,8)" rx="2" ry="2" />
+<text  x="477.85" y="271.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="498.7" y="229" width="11.9" height="15.0" fill="rgb(253,67,19)" rx="2" ry="2" />
+<text  x="501.69" y="239.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="629.8" y="245" width="11.9" height="15.0" fill="rgb(249,210,11)" rx="2" ry="2" />
+<text  x="632.80" y="255.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff1450, (1 samples, 1.01%)</title><rect x="427.2" y="277" width="11.9" height="15.0" fill="rgb(230,9,49)" rx="2" ry="2" />
+<text  x="430.17" y="287.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="10.0" y="229" width="11.9" height="15.0" fill="rgb(240,83,14)" rx="2" ry="2" />
+<text  x="13.00" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Young (1 samples, 1.01%)</title><rect x="248.4" y="261" width="11.9" height="15.0" fill="rgb(230,57,15)" rx="2" ry="2" />
+<text  x="251.38" y="271.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff6610, (1 samples, 1.01%)</title><rect x="546.4" y="277" width="11.9" height="15.0" fill="rgb(246,84,42)" rx="2" ry="2" />
+<text  x="549.36" y="287.5" ></text>
+</g>
+<g >
+<title>std::equal_to&lt;PageId&gt;::operator() (1 samples, 1.01%)</title><rect x="784.7" y="101" width="12.0" height="15.0" fill="rgb(211,39,0)" rx="2" ry="2" />
+<text  x="787.75" y="111.5" ></text>
+</g>
+<g >
+<title>_IO_getc (1 samples, 1.01%)</title><rect x="880.1" y="261" width="11.9" height="15.0" fill="rgb(211,7,51)" rx="2" ry="2" />
+<text  x="883.10" y="271.5" ></text>
+</g>
+<g >
+<title>__GI___libc_malloc(bytes=4096) (1 samples, 1.01%)</title><rect x="844.3" y="197" width="12.0" height="15.0" fill="rgb(232,198,32)" rx="2" ry="2" />
+<text  x="847.34" y="207.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="248.4" y="245" width="11.9" height="15.0" fill="rgb(229,217,29)" rx="2" ry="2" />
+<text  x="251.38" y="255.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="224.5" y="229" width="12.0" height="15.0" fill="rgb(237,18,38)" rx="2" ry="2" />
+<text  x="227.55" y="239.5" ></text>
+</g>
+<g >
+<title>PageId::PageId (1 samples, 1.01%)</title><rect x="164.9" y="245" width="12.0" height="15.0" fill="rgb(253,107,54)" rx="2" ry="2" />
+<text  x="167.95" y="255.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe0cb0, (1 samples, 1.01%)</title><rect x="45.8" y="277" width="11.9" height="15.0" fill="rgb(246,201,34)" rx="2" ry="2" />
+<text  x="48.76" y="287.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Map_base&lt;PageId, (4 samples, 4.04%)</title><rect x="713.2" y="181" width="47.7" height="15.0" fill="rgb(226,19,11)" rx="2" ry="2" />
+<text  x="716.23" y="191.5" >std:..</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="296.1" y="213" width="11.9" height="15.0" fill="rgb(254,145,1)" rx="2" ry="2" />
+<text  x="299.06" y="223.5" ></text>
+</g>
+<g >
+<title>std::_Destroy&lt;MultiThreadedPageRankComputer::ThreadRAII*&gt; (18 samples, 18.18%)</title><rect x="951.6" y="245" width="214.6" height="15.0" fill="rgb(214,5,15)" rx="2" ry="2" />
+<text  x="954.62" y="255.5" >std::_Destroy&lt;MultiThreadedP..</text>
+</g>
+<g >
+<title>__lll_lock_wait_private (1 samples, 1.01%)</title><rect x="10.0" y="133" width="11.9" height="15.0" fill="rgb(220,48,39)" rx="2" ry="2" />
+<text  x="13.00" y="143.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Hashtable_base&lt;PageId, (3 samples, 3.03%)</title><rect x="760.9" y="133" width="35.8" height="15.0" fill="rgb(210,213,35)" rx="2" ry="2" />
+<text  x="763.91" y="143.5" >std..</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="308.0" y="245" width="11.9" height="15.0" fill="rgb(243,15,26)" rx="2" ry="2" />
+<text  x="310.98" y="255.5" ></text>
+</g>
+<g >
+<title>__lll_unlock_wake_private (1 samples, 1.01%)</title><rect x="81.5" y="133" width="11.9" height="15.0" fill="rgb(209,66,3)" rx="2" ry="2" />
+<text  x="84.52" y="143.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="93.4" y="261" width="12.0" height="15.0" fill="rgb(242,217,37)" rx="2" ry="2" />
+<text  x="96.43" y="271.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fedfd0, (1 samples, 1.01%)</title><rect x="331.8" y="277" width="11.9" height="15.0" fill="rgb(246,222,45)" rx="2" ry="2" />
+<text  x="334.82" y="287.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="629.8" y="261" width="11.9" height="15.0" fill="rgb(224,149,32)" rx="2" ry="2" />
+<text  x="632.80" y="271.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="57.7" y="261" width="11.9" height="15.0" fill="rgb(237,27,48)" rx="2" ry="2" />
+<text  x="60.68" y="271.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="439.1" y="261" width="11.9" height="15.0" fill="rgb(250,131,40)" rx="2" ry="2" />
+<text  x="442.09" y="271.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="486.8" y="245" width="11.9" height="15.0" fill="rgb(229,33,46)" rx="2" ry="2" />
+<text  x="489.77" y="255.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;New (1 samples, 1.01%)</title><rect x="141.1" y="261" width="11.9" height="15.0" fill="rgb(209,31,38)" rx="2" ry="2" />
+<text  x="144.11" y="271.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="81.5" y="261" width="11.9" height="15.0" fill="rgb(254,85,21)" rx="2" ry="2" />
+<text  x="84.52" y="271.5" ></text>
+</g>
+<g >
+<title>__gnu_cxx::new_allocator&lt;PageId&gt;::allocate(this=&lt;optimized (1 samples, 1.01%)</title><rect x="844.3" y="229" width="12.0" height="15.0" fill="rgb(230,39,6)" rx="2" ry="2" />
+<text  x="847.34" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="308.0" y="261" width="11.9" height="15.0" fill="rgb(235,196,35)" rx="2" ry="2" />
+<text  x="310.98" y="271.5" ></text>
+</g>
+<g >
+<title>__GI___libc_malloc(bytes=65) (1 samples, 1.01%)</title><rect x="224.5" y="149" width="12.0" height="15.0" fill="rgb(216,122,46)" rx="2" ry="2" />
+<text  x="227.55" y="159.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="546.4" y="261" width="11.9" height="15.0" fill="rgb(219,47,8)" rx="2" ry="2" />
+<text  x="549.36" y="271.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="117.3" y="261" width="11.9" height="15.0" fill="rgb(212,53,15)" rx="2" ry="2" />
+<text  x="120.27" y="271.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fdf1b0, (1 samples, 1.01%)</title><rect x="10.0" y="277" width="11.9" height="15.0" fill="rgb(208,23,6)" rx="2" ry="2" />
+<text  x="13.00" y="287.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;PageId, (3 samples, 3.03%)</title><rect x="760.9" y="149" width="35.8" height="15.0" fill="rgb(239,171,23)" rx="2" ry="2" />
+<text  x="763.91" y="159.5" >std..</text>
+</g>
+<g >
+<title>PageId::PageId (1 samples, 1.01%)</title><rect x="10.0" y="245" width="11.9" height="15.0" fill="rgb(252,170,33)" rx="2" ry="2" />
+<text  x="13.00" y="255.5" ></text>
+</g>
+<g >
+<title>std::hash&lt;std::__cxx11::basic_string&lt;char, (3 samples, 3.03%)</title><rect x="725.2" y="133" width="35.7" height="15.0" fill="rgb(240,72,19)" rx="2" ry="2" />
+<text  x="728.15" y="143.5" >std..</text>
+</g>
+<g >
+<title>MultiThreadedPageRankComputer::gen_id_thread(frst_free=..., (54 samples, 54.55%)</title><rect x="10.0" y="293" width="643.6" height="15.0" fill="rgb(207,229,52)" rx="2" ry="2" />
+<text  x="13.00" y="303.5" >MultiThreadedPageRankComputer::gen_id_thread(frst_free=...,</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="415.3" y="245" width="11.9" height="15.0" fill="rgb(206,93,2)" rx="2" ry="2" />
+<text  x="418.25" y="255.5" ></text>
+</g>
+<g >
+<title>MultiThreadedPageRankComputer::computeForNetwork (25 samples, 25.25%)</title><rect x="892.0" y="309" width="298.0" height="15.0" fill="rgb(227,35,53)" rx="2" ry="2" />
+<text  x="895.02" y="319.5" >MultiThreadedPageRankComputer::computeFo..</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="510.6" y="245" width="11.9" height="15.0" fill="rgb(229,224,24)" rx="2" ry="2" />
+<text  x="513.61" y="255.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Stupid (1 samples, 1.01%)</title><rect x="498.7" y="261" width="11.9" height="15.0" fill="rgb(240,31,19)" rx="2" ry="2" />
+<text  x="501.69" y="271.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="296.1" y="261" width="11.9" height="15.0" fill="rgb(252,217,35)" rx="2" ry="2" />
+<text  x="299.06" y="271.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="260.3" y="245" width="11.9" height="15.0" fill="rgb(235,197,16)" rx="2" ry="2" />
+<text  x="263.30" y="255.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fefd10, (1 samples, 1.01%)</title><rect x="379.5" y="277" width="11.9" height="15.0" fill="rgb(228,104,18)" rx="2" ry="2" />
+<text  x="382.49" y="287.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe7070, (1 samples, 1.01%)</title><rect x="212.6" y="277" width="11.9" height="15.0" fill="rgb(224,146,2)" rx="2" ry="2" />
+<text  x="215.63" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_fork() (1 samples, 1.01%)</title><rect x="522.5" y="245" width="11.9" height="15.0" fill="rgb(247,84,15)" rx="2" ry="2" />
+<text  x="525.53" y="255.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff9010, (1 samples, 1.01%)</title><rect x="641.7" y="277" width="11.9" height="15.0" fill="rgb(205,10,33)" rx="2" ry="2" />
+<text  x="644.72" y="287.5" ></text>
+</g>
+<g >
+<title>main(argc=&lt;optimized (30 samples, 30.30%)</title><rect x="832.4" y="341" width="357.6" height="15.0" fill="rgb(241,143,5)" rx="2" ry="2" />
+<text  x="835.42" y="351.5" >main(argc=&lt;optimized</text>
+</g>
+<g >
+<title>std::__invoke&lt;void (15 samples, 15.15%)</title><rect x="653.6" y="245" width="178.8" height="15.0" fill="rgb(253,33,47)" rx="2" ry="2" />
+<text  x="656.64" y="255.5" >std::__invoke&lt;void</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="832.4" y="293" width="11.9" height="15.0" fill="rgb(247,184,39)" rx="2" ry="2" />
+<text  x="835.42" y="303.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe3f50, (1 samples, 1.01%)</title><rect x="141.1" y="277" width="11.9" height="15.0" fill="rgb(208,104,54)" rx="2" ry="2" />
+<text  x="144.11" y="287.5" ></text>
+</g>
+<g >
+<title>std::_Destroy&lt;MultiThreadedPageRankComputer::ThreadRAII&gt; (18 samples, 18.18%)</title><rect x="951.6" y="213" width="214.6" height="15.0" fill="rgb(210,11,48)" rx="2" ry="2" />
+<text  x="954.62" y="223.5" >std::_Destroy&lt;MultiThreadedP..</text>
+</g>
+<g >
+<title>PageId::PageId (1 samples, 1.01%)</title><rect x="45.8" y="245" width="11.9" height="15.0" fill="rgb(215,63,38)" rx="2" ry="2" />
+<text  x="48.76" y="255.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="498.7" y="245" width="11.9" height="15.0" fill="rgb(215,4,6)" rx="2" ry="2" />
+<text  x="501.69" y="255.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Little (1 samples, 1.01%)</title><rect x="391.4" y="261" width="11.9" height="15.0" fill="rgb(230,197,18)" rx="2" ry="2" />
+<text  x="394.41" y="271.5" ></text>
+</g>
+<g >
+<title>std::thread::_State_impl&lt;std::thread::_Invoker&lt;std::tuple&lt;void (15 samples, 15.15%)</title><rect x="653.6" y="293" width="178.8" height="15.0" fill="rgb(240,48,45)" rx="2" ry="2" />
+<text  x="656.64" y="303.5" >std::thread::_State_imp..</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="510.6" y="213" width="11.9" height="15.0" fill="rgb(215,124,28)" rx="2" ry="2" />
+<text  x="513.61" y="223.5" ></text>
+</g>
+<g >
+<title>operatornew(unsigned (1 samples, 1.01%)</title><rect x="224.5" y="165" width="12.0" height="15.0" fill="rgb(247,1,32)" rx="2" ry="2" />
+<text  x="227.55" y="175.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="272.2" y="229" width="11.9" height="15.0" fill="rgb(244,211,28)" rx="2" ry="2" />
+<text  x="275.22" y="239.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe2570, (1 samples, 1.01%)</title><rect x="81.5" y="277" width="11.9" height="15.0" fill="rgb(222,4,35)" rx="2" ry="2" />
+<text  x="84.52" y="287.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="10.0" y="261" width="11.9" height="15.0" fill="rgb(220,111,33)" rx="2" ry="2" />
+<text  x="13.00" y="271.5" ></text>
+</g>
+<g >
+<title>std::_Hash_impl::hash(__seed=3339675911, (3 samples, 3.03%)</title><rect x="725.2" y="117" width="35.7" height="15.0" fill="rgb(240,43,10)" rx="2" ry="2" />
+<text  x="728.15" y="127.5" >std..</text>
+</g>
+<g >
+<title>__run_fork_handlers(who=(unknown: (1 samples, 1.01%)</title><rect x="558.3" y="229" width="11.9" height="15.0" fill="rgb(244,170,1)" rx="2" ry="2" />
+<text  x="561.28" y="239.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Map_base&lt;PageId,std::pair&lt;PageId (1 samples, 1.01%)</title><rect x="820.5" y="181" width="11.9" height="15.0" fill="rgb(226,146,16)" rx="2" ry="2" />
+<text  x="823.51" y="191.5" ></text>
+</g>
+<g >
+<title>std::_Destroy_aux&lt;false&gt;::__destroy&lt;MultiThreadedPageRankComputer::ThreadRAII*&gt; (18 samples, 18.18%)</title><rect x="951.6" y="229" width="214.6" height="15.0" fill="rgb(209,225,38)" rx="2" ry="2" />
+<text  x="954.62" y="239.5" >std::_Destroy_aux&lt;false&gt;::__..</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="582.1" y="245" width="11.9" height="15.0" fill="rgb(207,87,14)" rx="2" ry="2" />
+<text  x="585.12" y="255.5" ></text>
+</g>
+<g >
+<title>__lll_lock_wait_private (1 samples, 1.01%)</title><rect x="367.6" y="133" width="11.9" height="15.0" fill="rgb(229,106,3)" rx="2" ry="2" />
+<text  x="370.58" y="143.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="534.4" y="197" width="12.0" height="15.0" fill="rgb(239,175,51)" rx="2" ry="2" />
+<text  x="537.44" y="207.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="164.9" y="213" width="12.0" height="15.0" fill="rgb(220,211,1)" rx="2" ry="2" />
+<text  x="167.95" y="223.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe7010, (1 samples, 1.01%)</title><rect x="200.7" y="277" width="11.9" height="15.0" fill="rgb(250,24,35)" rx="2" ry="2" />
+<text  x="203.71" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="93.4" y="245" width="12.0" height="15.0" fill="rgb(244,3,23)" rx="2" ry="2" />
+<text  x="96.43" y="255.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="379.5" y="229" width="11.9" height="15.0" fill="rgb(226,40,26)" rx="2" ry="2" />
+<text  x="382.49" y="239.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="284.1" y="229" width="12.0" height="15.0" fill="rgb(250,34,49)" rx="2" ry="2" />
+<text  x="287.14" y="239.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="10.0" y="213" width="11.9" height="15.0" fill="rgb(238,49,6)" rx="2" ry="2" />
+<text  x="13.00" y="223.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe3e30, (1 samples, 1.01%)</title><rect x="117.3" y="277" width="11.9" height="15.0" fill="rgb(205,138,8)" rx="2" ry="2" />
+<text  x="120.27" y="287.5" ></text>
+</g>
+<g >
+<title>operatornew(unsigned (1 samples, 1.01%)</title><rect x="45.8" y="165" width="11.9" height="15.0" fill="rgb(229,227,34)" rx="2" ry="2" />
+<text  x="48.76" y="175.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff2e90, (1 samples, 1.01%)</title><rect x="451.0" y="277" width="11.9" height="15.0" fill="rgb(232,180,52)" rx="2" ry="2" />
+<text  x="454.01" y="287.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="367.6" y="261" width="11.9" height="15.0" fill="rgb(215,149,9)" rx="2" ry="2" />
+<text  x="370.58" y="271.5" ></text>
+</g>
+<g >
+<title>operatornew(unsigned (1 samples, 1.01%)</title><rect x="10.0" y="165" width="11.9" height="15.0" fill="rgb(254,47,12)" rx="2" ry="2" />
+<text  x="13.00" y="175.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="57.7" y="229" width="11.9" height="15.0" fill="rgb(244,119,41)" rx="2" ry="2" />
+<text  x="60.68" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="200.7" y="261" width="11.9" height="15.0" fill="rgb(238,52,45)" rx="2" ry="2" />
+<text  x="203.71" y="271.5" ></text>
+</g>
+<g >
+<title>PageId::PageId (1 samples, 1.01%)</title><rect x="296.1" y="245" width="11.9" height="15.0" fill="rgb(243,115,40)" rx="2" ry="2" />
+<text  x="299.06" y="255.5" ></text>
+</g>
+<g >
+<title>__gnu_cxx::new_allocator&lt;std::pair&lt;PageId, (2 samples, 2.02%)</title><rect x="1166.2" y="245" width="23.8" height="15.0" fill="rgb(244,11,22)" rx="2" ry="2" />
+<text  x="1169.16" y="255.5" >_..</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="129.2" y="229" width="11.9" height="15.0" fill="rgb(232,192,27)" rx="2" ry="2" />
+<text  x="132.19" y="239.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="236.5" y="229" width="11.9" height="15.0" fill="rgb(225,125,24)" rx="2" ry="2" />
+<text  x="239.46" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="236.5" y="261" width="11.9" height="15.0" fill="rgb(244,54,50)" rx="2" ry="2" />
+<text  x="239.46" y="271.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Odd (1 samples, 1.01%)</title><rect x="522.5" y="261" width="11.9" height="15.0" fill="rgb(243,134,23)" rx="2" ry="2" />
+<text  x="525.53" y="271.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="462.9" y="229" width="11.9" height="15.0" fill="rgb(228,116,11)" rx="2" ry="2" />
+<text  x="465.93" y="239.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe56f0, (1 samples, 1.01%)</title><rect x="176.9" y="277" width="11.9" height="15.0" fill="rgb(220,226,31)" rx="2" ry="2" />
+<text  x="179.87" y="287.5" ></text>
+</g>
+<g >
+<title>__lll_lock_wait_private (1 samples, 1.01%)</title><rect x="558.3" y="213" width="11.9" height="15.0" fill="rgb(209,193,20)" rx="2" ry="2" />
+<text  x="561.28" y="223.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="296.1" y="197" width="11.9" height="15.0" fill="rgb(212,191,26)" rx="2" ry="2" />
+<text  x="299.06" y="207.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fee030, (1 samples, 1.01%)</title><rect x="343.7" y="277" width="12.0" height="15.0" fill="rgb(216,120,37)" rx="2" ry="2" />
+<text  x="346.74" y="287.5" ></text>
+</g>
+<g >
+<title>??() (69 samples, 69.70%)</title><rect x="10.0" y="309" width="822.4" height="15.0" fill="rgb(245,204,10)" rx="2" ry="2" />
+<text  x="13.00" y="319.5" >??()</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="439.1" y="229" width="11.9" height="15.0" fill="rgb(231,194,33)" rx="2" ry="2" />
+<text  x="442.09" y="239.5" ></text>
+</g>
+<g >
+<title>pageRankComputationWithNetwork(computer=..., (25 samples, 25.25%)</title><rect x="892.0" y="325" width="298.0" height="15.0" fill="rgb(230,215,13)" rx="2" ry="2" />
+<text  x="895.02" y="335.5" >pageRankComputationWithNetwork(computer=..</text>
+</g>
+<g >
+<title>std::allocator_traits&lt;std::allocator&lt;PageId&gt; (1 samples, 1.01%)</title><rect x="844.3" y="245" width="12.0" height="15.0" fill="rgb(213,191,42)" rx="2" ry="2" />
+<text  x="847.34" y="255.5" ></text>
+</g>
+<g >
+<title>__memcmp_avx2_movbe (1 samples, 1.01%)</title><rect x="784.7" y="37" width="12.0" height="15.0" fill="rgb(252,108,33)" rx="2" ry="2" />
+<text  x="787.75" y="47.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="153.0" y="245" width="11.9" height="15.0" fill="rgb(211,50,32)" rx="2" ry="2" />
+<text  x="156.03" y="255.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="617.9" y="229" width="11.9" height="15.0" fill="rgb(247,6,15)" rx="2" ry="2" />
+<text  x="620.88" y="239.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;PageId,std::pair&lt;PageId (1 samples, 1.01%)</title><rect x="713.2" y="149" width="12.0" height="15.0" fill="rgb(210,109,16)" rx="2" ry="2" />
+<text  x="716.23" y="159.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fec2f0, (1 samples, 1.01%)</title><rect x="308.0" y="277" width="11.9" height="15.0" fill="rgb(244,33,53)" rx="2" ry="2" />
+<text  x="310.98" y="287.5" ></text>
+</g>
+<g >
+<title>operatornew(unsigned (1 samples, 1.01%)</title><rect x="164.9" y="165" width="12.0" height="15.0" fill="rgb(230,188,20)" rx="2" ry="2" />
+<text  x="167.95" y="175.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;PageId,std::allocator&lt;PageId&gt; (1 samples, 1.01%)</title><rect x="844.3" y="293" width="12.0" height="15.0" fill="rgb(243,210,26)" rx="2" ry="2" />
+<text  x="847.34" y="303.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;PageId,std::pair&lt;PageId (1 samples, 1.01%)</title><rect x="796.7" y="149" width="11.9" height="15.0" fill="rgb(213,122,32)" rx="2" ry="2" />
+<text  x="799.67" y="159.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe8cf0, (1 samples, 1.01%)</title><rect x="236.5" y="277" width="11.9" height="15.0" fill="rgb(224,95,45)" rx="2" ry="2" />
+<text  x="239.46" y="287.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Hash_code_base&lt;PageId, (3 samples, 3.03%)</title><rect x="725.2" y="165" width="35.7" height="15.0" fill="rgb(216,44,27)" rx="2" ry="2" />
+<text  x="728.15" y="175.5" >std..</text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Huge (1 samples, 1.01%)</title><rect x="355.7" y="261" width="11.9" height="15.0" fill="rgb(251,115,32)" rx="2" ry="2" />
+<text  x="358.66" y="271.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="641.7" y="245" width="11.9" height="15.0" fill="rgb(240,110,46)" rx="2" ry="2" />
+<text  x="644.72" y="255.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="391.4" y="245" width="11.9" height="15.0" fill="rgb(251,111,17)" rx="2" ry="2" />
+<text  x="394.41" y="255.5" ></text>
+</g>
+<g >
+<title>__GI___libc_malloc(bytes=65) (1 samples, 1.01%)</title><rect x="45.8" y="149" width="11.9" height="15.0" fill="rgb(230,138,29)" rx="2" ry="2" />
+<text  x="48.76" y="159.5" ></text>
+</g>
+<g >
+<title>__libc_fork() (1 samples, 1.01%)</title><rect x="105.4" y="245" width="11.9" height="15.0" fill="rgb(254,104,26)" rx="2" ry="2" />
+<text  x="108.35" y="255.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="606.0" y="229" width="11.9" height="15.0" fill="rgb(209,28,9)" rx="2" ry="2" />
+<text  x="608.96" y="239.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="355.7" y="229" width="11.9" height="15.0" fill="rgb(211,208,53)" rx="2" ry="2" />
+<text  x="358.66" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Great (1 samples, 1.01%)</title><rect x="462.9" y="261" width="11.9" height="15.0" fill="rgb(224,169,50)" rx="2" ry="2" />
+<text  x="465.93" y="271.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="451.0" y="245" width="11.9" height="15.0" fill="rgb(241,186,37)" rx="2" ry="2" />
+<text  x="454.01" y="255.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="45.8" y="229" width="11.9" height="15.0" fill="rgb(208,31,14)" rx="2" ry="2" />
+<text  x="48.76" y="239.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe8d50, (1 samples, 1.01%)</title><rect x="248.4" y="277" width="11.9" height="15.0" fill="rgb(244,175,11)" rx="2" ry="2" />
+<text  x="251.38" y="287.5" ></text>
+</g>
+<g >
+<title>std::thread::_Invoker&lt;std::tuple&lt;void (15 samples, 15.15%)</title><rect x="653.6" y="261" width="178.8" height="15.0" fill="rgb(253,37,11)" rx="2" ry="2" />
+<text  x="656.64" y="271.5" >std::thread::_Invoker&lt;s..</text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="319.9" y="245" width="11.9" height="15.0" fill="rgb(236,153,17)" rx="2" ry="2" />
+<text  x="322.90" y="255.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="81.5" y="181" width="11.9" height="15.0" fill="rgb(240,155,41)" rx="2" ry="2" />
+<text  x="84.52" y="191.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="117.3" y="245" width="11.9" height="15.0" fill="rgb(249,14,9)" rx="2" ry="2" />
+<text  x="120.27" y="255.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="45.8" y="197" width="11.9" height="15.0" fill="rgb(248,187,23)" rx="2" ry="2" />
+<text  x="48.76" y="207.5" ></text>
+</g>
+<g >
+<title>std::atomic&lt;double&gt;::compare_exchange_weak(__f=std::memory_order_seq_cst, (5 samples, 5.05%)</title><rect x="653.6" y="149" width="59.6" height="15.0" fill="rgb(234,114,32)" rx="2" ry="2" />
+<text  x="656.64" y="159.5" >std::a..</text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="212.6" y="245" width="11.9" height="15.0" fill="rgb(211,69,28)" rx="2" ry="2" />
+<text  x="215.63" y="255.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="546.4" y="245" width="11.9" height="15.0" fill="rgb(214,229,30)" rx="2" ry="2" />
+<text  x="549.36" y="255.5" ></text>
+</g>
+<g >
+<title>std::unordered_map&lt;PageId, (4 samples, 4.04%)</title><rect x="713.2" y="197" width="47.7" height="15.0" fill="rgb(211,180,9)" rx="2" ry="2" />
+<text  x="716.23" y="207.5" >std:..</text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff1390, (1 samples, 1.01%)</title><rect x="403.3" y="277" width="12.0" height="15.0" fill="rgb(210,28,50)" rx="2" ry="2" />
+<text  x="406.33" y="287.5" ></text>
+</g>
+<g >
+<title>MultiThreadedPageRankComputer::CyclicBarrier::wait (5 samples, 5.05%)</title><rect x="892.0" y="293" width="59.6" height="15.0" fill="rgb(206,21,51)" rx="2" ry="2" />
+<text  x="895.02" y="303.5" >MultiT..</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="367.6" y="197" width="11.9" height="15.0" fill="rgb(212,62,40)" rx="2" ry="2" />
+<text  x="370.58" y="207.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="355.7" y="245" width="11.9" height="15.0" fill="rgb(239,223,22)" rx="2" ry="2" />
+<text  x="358.66" y="255.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="486.8" y="261" width="11.9" height="15.0" fill="rgb(223,30,41)" rx="2" ry="2" />
+<text  x="489.77" y="271.5" ></text>
+</g>
+<g >
+<title>__lll_lock_wait_private (1 samples, 1.01%)</title><rect x="164.9" y="133" width="12.0" height="15.0" fill="rgb(224,222,1)" rx="2" ry="2" />
+<text  x="167.95" y="143.5" ></text>
+</g>
+<g >
+<title>std::_Destroy&lt;MultiThreadedPageRankComputer::ThreadRAII*, (18 samples, 18.18%)</title><rect x="951.6" y="261" width="214.6" height="15.0" fill="rgb(211,117,48)" rx="2" ry="2" />
+<text  x="954.62" y="271.5" >std::_Destroy&lt;MultiThreadedP..</text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe3ef0, (1 samples, 1.01%)</title><rect x="129.2" y="277" width="11.9" height="15.0" fill="rgb(229,195,17)" rx="2" ry="2" />
+<text  x="132.19" y="287.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="164.9" y="261" width="12.0" height="15.0" fill="rgb(229,50,38)" rx="2" ry="2" />
+<text  x="167.95" y="271.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe5510, (1 samples, 1.01%)</title><rect x="153.0" y="277" width="11.9" height="15.0" fill="rgb(242,62,47)" rx="2" ry="2" />
+<text  x="156.03" y="287.5" ></text>
+</g>
+<g >
+<title>__malloc_fork_unlock_parent() (1 samples, 1.01%)</title><rect x="522.5" y="229" width="11.9" height="15.0" fill="rgb(242,129,1)" rx="2" ry="2" />
+<text  x="525.53" y="239.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff7b10, (1 samples, 1.01%)</title><rect x="606.0" y="277" width="11.9" height="15.0" fill="rgb(244,79,26)" rx="2" ry="2" />
+<text  x="608.96" y="287.5" ></text>
+</g>
+<g >
+<title>__lll_lock_wait_private (1 samples, 1.01%)</title><rect x="45.8" y="133" width="11.9" height="15.0" fill="rgb(224,136,25)" rx="2" ry="2" />
+<text  x="48.76" y="143.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="308.0" y="229" width="11.9" height="15.0" fill="rgb(221,91,24)" rx="2" ry="2" />
+<text  x="310.98" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="188.8" y="261" width="11.9" height="15.0" fill="rgb(251,143,12)" rx="2" ry="2" />
+<text  x="191.79" y="271.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="486.8" y="229" width="11.9" height="15.0" fill="rgb(229,162,47)" rx="2" ry="2" />
+<text  x="489.77" y="239.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="33.8" y="245" width="12.0" height="15.0" fill="rgb(218,59,8)" rx="2" ry="2" />
+<text  x="36.84" y="255.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="534.4" y="245" width="12.0" height="15.0" fill="rgb(222,175,6)" rx="2" ry="2" />
+<text  x="537.44" y="255.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;std::pair&lt;PageId, (2 samples, 2.02%)</title><rect x="1166.2" y="293" width="23.8" height="15.0" fill="rgb(213,52,53)" rx="2" ry="2" />
+<text  x="1169.16" y="303.5" >s..</text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fdf2d0, (1 samples, 1.01%)</title><rect x="33.8" y="277" width="12.0" height="15.0" fill="rgb(246,72,24)" rx="2" ry="2" />
+<text  x="36.84" y="287.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff66d0, (1 samples, 1.01%)</title><rect x="570.2" y="277" width="11.9" height="15.0" fill="rgb(208,94,25)" rx="2" ry="2" />
+<text  x="573.20" y="287.5" ></text>
+</g>
+<g >
+<title>StdinGenerator::generateNetworkOfSize(this=this@entry=0x7ffde663d580, (1 samples, 1.01%)</title><rect x="832.4" y="325" width="11.9" height="15.0" fill="rgb(220,216,37)" rx="2" ry="2" />
+<text  x="835.42" y="335.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Old (1 samples, 1.01%)</title><rect x="69.6" y="261" width="11.9" height="15.0" fill="rgb(217,131,33)" rx="2" ry="2" />
+<text  x="72.60" y="271.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="641.7" y="229" width="11.9" height="15.0" fill="rgb(253,29,29)" rx="2" ry="2" />
+<text  x="644.72" y="239.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff13f0, (1 samples, 1.01%)</title><rect x="415.3" y="277" width="11.9" height="15.0" fill="rgb(252,181,3)" rx="2" ry="2" />
+<text  x="418.25" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="260.3" y="229" width="11.9" height="15.0" fill="rgb(232,178,5)" rx="2" ry="2" />
+<text  x="263.30" y="239.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="462.9" y="245" width="11.9" height="15.0" fill="rgb(230,89,35)" rx="2" ry="2" />
+<text  x="465.93" y="255.5" ></text>
+</g>
+<g >
+<title>__lll_lock_wait_private (1 samples, 1.01%)</title><rect x="224.5" y="133" width="12.0" height="15.0" fill="rgb(231,99,43)" rx="2" ry="2" />
+<text  x="227.55" y="143.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="415.3" y="229" width="11.9" height="15.0" fill="rgb(233,84,54)" rx="2" ry="2" />
+<text  x="418.25" y="239.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="33.8" y="229" width="12.0" height="15.0" fill="rgb(251,78,45)" rx="2" ry="2" />
+<text  x="36.84" y="239.5" ></text>
+</g>
+<g >
+<title>__GI___libc_malloc(bytes=65) (1 samples, 1.01%)</title><rect x="367.6" y="149" width="11.9" height="15.0" fill="rgb(227,177,45)" rx="2" ry="2" />
+<text  x="370.58" y="159.5" ></text>
+</g>
+<g >
+<title>PageId::PageId (1 samples, 1.01%)</title><rect x="224.5" y="245" width="12.0" height="15.0" fill="rgb(239,150,6)" rx="2" ry="2" />
+<text  x="227.55" y="255.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fefc50, (1 samples, 1.01%)</title><rect x="367.6" y="277" width="11.9" height="15.0" fill="rgb(223,180,29)" rx="2" ry="2" />
+<text  x="370.58" y="287.5" ></text>
+</g>
+<g >
+<title>PageId::operator== (1 samples, 1.01%)</title><rect x="784.7" y="85" width="12.0" height="15.0" fill="rgb(232,81,9)" rx="2" ry="2" />
+<text  x="787.75" y="95.5" ></text>
+</g>
+<g >
+<title>MultiThreadedPageRankComputer::pageRankWorkFunc (15 samples, 15.15%)</title><rect x="653.6" y="213" width="178.8" height="15.0" fill="rgb(234,123,29)" rx="2" ry="2" />
+<text  x="656.64" y="223.5" >MultiThreadedPageRankCo..</text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="69.6" y="245" width="11.9" height="15.0" fill="rgb(226,138,13)" rx="2" ry="2" />
+<text  x="72.60" y="255.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff5350, (1 samples, 1.01%)</title><rect x="534.4" y="277" width="12.0" height="15.0" fill="rgb(209,12,15)" rx="2" ry="2" />
+<text  x="537.44" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="284.1" y="245" width="12.0" height="15.0" fill="rgb(244,185,0)" rx="2" ry="2" />
+<text  x="287.14" y="255.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="200.7" y="245" width="11.9" height="15.0" fill="rgb(233,29,50)" rx="2" ry="2" />
+<text  x="203.71" y="255.5" ></text>
+</g>
+<g >
+<title>std::_Vector_base&lt;PageId, (1 samples, 1.01%)</title><rect x="844.3" y="261" width="12.0" height="15.0" fill="rgb(234,4,19)" rx="2" ry="2" />
+<text  x="847.34" y="271.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fec230, (1 samples, 1.01%)</title><rect x="296.1" y="277" width="11.9" height="15.0" fill="rgb(239,115,20)" rx="2" ry="2" />
+<text  x="299.06" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="21.9" y="229" width="11.9" height="15.0" fill="rgb(218,175,8)" rx="2" ry="2" />
+<text  x="24.92" y="239.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="510.6" y="197" width="11.9" height="15.0" fill="rgb(226,66,45)" rx="2" ry="2" />
+<text  x="513.61" y="207.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="594.0" y="229" width="12.0" height="15.0" fill="rgb(219,71,37)" rx="2" ry="2" />
+<text  x="597.04" y="239.5" ></text>
+</g>
+<g >
+<title>std::pair&lt;PageId, (2 samples, 2.02%)</title><rect x="1166.2" y="229" width="23.8" height="15.0" fill="rgb(234,129,5)" rx="2" ry="2" />
+<text  x="1169.16" y="239.5" >s..</text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="451.0" y="261" width="11.9" height="15.0" fill="rgb(242,133,48)" rx="2" ry="2" />
+<text  x="454.01" y="271.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="188.8" y="245" width="11.9" height="15.0" fill="rgb(228,14,29)" rx="2" ry="2" />
+<text  x="191.79" y="255.5" ></text>
+</g>
+<g >
+<title>std::_Hash_bytes(voidconst*, (1 samples, 1.01%)</title><rect x="808.6" y="101" width="11.9" height="15.0" fill="rgb(210,27,32)" rx="2" ry="2" />
+<text  x="811.59" y="111.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="570.2" y="245" width="11.9" height="15.0" fill="rgb(240,209,26)" rx="2" ry="2" />
+<text  x="573.20" y="255.5" ></text>
+</g>
+<g >
+<title>__GI___libc_malloc(bytes=65) (1 samples, 1.01%)</title><rect x="81.5" y="149" width="11.9" height="15.0" fill="rgb(251,187,31)" rx="2" ry="2" />
+<text  x="84.52" y="159.5" ></text>
+</g>
+<g >
+<title>StdinGenerator::generateNetworkOfSize (4 samples, 4.04%)</title><rect x="844.3" y="325" width="47.7" height="15.0" fill="rgb(220,153,9)" rx="2" ry="2" />
+<text  x="847.34" y="335.5" >Stdi..</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="474.8" y="245" width="12.0" height="15.0" fill="rgb(215,113,32)" rx="2" ry="2" />
+<text  x="477.85" y="255.5" ></text>
+</g>
+<g >
+<title>std::char_traits&lt;char&gt;::compare(__n=&lt;optimized (1 samples, 1.01%)</title><rect x="784.7" y="53" width="12.0" height="15.0" fill="rgb(250,68,13)" rx="2" ry="2" />
+<text  x="787.75" y="63.5" ></text>
+</g>
+<g >
+<title>PageId::PageId (2 samples, 2.02%)</title><rect x="1166.2" y="213" width="23.8" height="15.0" fill="rgb(214,4,32)" rx="2" ry="2" />
+<text  x="1169.16" y="223.5" >P..</text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="510.6" y="261" width="11.9" height="15.0" fill="rgb(215,106,29)" rx="2" ry="2" />
+<text  x="513.61" y="271.5" ></text>
+</g>
+<g >
+<title>operatornew(unsigned (1 samples, 1.01%)</title><rect x="367.6" y="165" width="11.9" height="15.0" fill="rgb(230,66,23)" rx="2" ry="2" />
+<text  x="370.58" y="175.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="427.2" y="245" width="11.9" height="15.0" fill="rgb(215,29,47)" rx="2" ry="2" />
+<text  x="430.17" y="255.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="331.8" y="245" width="11.9" height="15.0" fill="rgb(233,73,37)" rx="2" ry="2" />
+<text  x="334.82" y="255.5" ></text>
+</g>
+<g >
+<title>operatornew(unsigned (1 samples, 1.01%)</title><rect x="844.3" y="213" width="12.0" height="15.0" fill="rgb(208,11,39)" rx="2" ry="2" />
+<text  x="847.34" y="223.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Huge (1 samples, 1.01%)</title><rect x="176.9" y="261" width="11.9" height="15.0" fill="rgb(209,203,38)" rx="2" ry="2" />
+<text  x="179.87" y="271.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (2 samples, 2.02%)</title><rect x="1166.2" y="181" width="23.8" height="15.0" fill="rgb(250,125,34)" rx="2" ry="2" />
+<text  x="1169.16" y="191.5" >s..</text>
+</g>
+<g >
+<title>std::thread::join()() (18 samples, 18.18%)</title><rect x="951.6" y="181" width="214.6" height="15.0" fill="rgb(249,126,42)" rx="2" ry="2" />
+<text  x="954.62" y="191.5" >std::thread::join()()</text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="248.4" y="229" width="11.9" height="15.0" fill="rgb(213,28,25)" rx="2" ry="2" />
+<text  x="251.38" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Big (1 samples, 1.01%)</title><rect x="284.1" y="261" width="12.0" height="15.0" fill="rgb(236,74,45)" rx="2" ry="2" />
+<text  x="287.14" y="271.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;std::pair&lt;PageId, (2 samples, 2.02%)</title><rect x="1166.2" y="277" width="23.8" height="15.0" fill="rgb(217,132,54)" rx="2" ry="2" />
+<text  x="1169.16" y="287.5" >s..</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="403.3" y="229" width="12.0" height="15.0" fill="rgb(234,57,16)" rx="2" ry="2" />
+<text  x="406.33" y="239.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="10.0" y="197" width="11.9" height="15.0" fill="rgb(237,173,42)" rx="2" ry="2" />
+<text  x="13.00" y="207.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="415.3" y="197" width="11.9" height="15.0" fill="rgb(247,192,22)" rx="2" ry="2" />
+<text  x="418.25" y="207.5" ></text>
+</g>
+<g >
+<title>operatornew(unsigned (1 samples, 1.01%)</title><rect x="296.1" y="165" width="11.9" height="15.0" fill="rgb(240,69,35)" rx="2" ry="2" />
+<text  x="299.06" y="175.5" ></text>
+</g>
+<g >
+<title>MultiThreadedPageRankComputer::ThreadRAII::~ThreadRAII(this=0x55da05e4e610, (18 samples, 18.18%)</title><rect x="951.6" y="197" width="214.6" height="15.0" fill="rgb(237,70,42)" rx="2" ry="2" />
+<text  x="954.62" y="207.5" >MultiThreadedPageRankCompute..</text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff6670, (1 samples, 1.01%)</title><rect x="558.3" y="277" width="11.9" height="15.0" fill="rgb(232,147,42)" rx="2" ry="2" />
+<text  x="561.28" y="287.5" ></text>
+</g>
+<g >
+<title>std::unordered_map&lt;PageId,std::atomic&lt;double&gt;, (6 samples, 6.06%)</title><rect x="760.9" y="197" width="71.5" height="15.0" fill="rgb(236,119,32)" rx="2" ry="2" />
+<text  x="763.91" y="207.5" >std::uno..</text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Old (1 samples, 1.01%)</title><rect x="558.3" y="261" width="11.9" height="15.0" fill="rgb(242,49,54)" rx="2" ry="2" />
+<text  x="561.28" y="271.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Stupid (1 samples, 1.01%)</title><rect x="641.7" y="261" width="11.9" height="15.0" fill="rgb(229,145,1)" rx="2" ry="2" />
+<text  x="644.72" y="271.5" ></text>
+</g>
+<g >
+<title>std::condition_variable::wait(std::unique_lock&lt;std::mutex&gt;&amp;)() (5 samples, 5.05%)</title><rect x="892.0" y="261" width="59.6" height="15.0" fill="rgb(242,157,43)" rx="2" ry="2" />
+<text  x="895.02" y="271.5" >std::c..</text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="176.9" y="245" width="11.9" height="15.0" fill="rgb(214,115,23)" rx="2" ry="2" />
+<text  x="179.87" y="255.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe0d70, (1 samples, 1.01%)</title><rect x="69.6" y="277" width="11.9" height="15.0" fill="rgb(228,193,24)" rx="2" ry="2" />
+<text  x="72.60" y="287.5" ></text>
+</g>
+<g >
+<title>__GI___libc_malloc(bytes=65) (1 samples, 1.01%)</title><rect x="296.1" y="149" width="11.9" height="15.0" fill="rgb(242,72,6)" rx="2" ry="2" />
+<text  x="299.06" y="159.5" ></text>
+</g>
+<g >
+<title>std::getline&lt;char,std::char_traits&lt;char&gt;, (3 samples, 3.03%)</title><rect x="856.3" y="309" width="35.7" height="15.0" fill="rgb(235,188,10)" rx="2" ry="2" />
+<text  x="859.26" y="319.5" >std..</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="343.7" y="229" width="12.0" height="15.0" fill="rgb(222,226,9)" rx="2" ry="2" />
+<text  x="346.74" y="239.5" ></text>
+</g>
+<g >
+<title>__pthread_cond_wait_common (5 samples, 5.05%)</title><rect x="892.0" y="229" width="59.6" height="15.0" fill="rgb(221,146,46)" rx="2" ry="2" />
+<text  x="895.02" y="239.5" >__pthr..</text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fea850, (1 samples, 1.01%)</title><rect x="272.2" y="277" width="11.9" height="15.0" fill="rgb(210,159,48)" rx="2" ry="2" />
+<text  x="275.22" y="287.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="391.4" y="229" width="11.9" height="15.0" fill="rgb(236,8,39)" rx="2" ry="2" />
+<text  x="394.41" y="239.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="81.5" y="229" width="11.9" height="15.0" fill="rgb(219,148,23)" rx="2" ry="2" />
+<text  x="84.52" y="239.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="153.0" y="229" width="11.9" height="15.0" fill="rgb(225,133,12)" rx="2" ry="2" />
+<text  x="156.03" y="239.5" ></text>
+</g>
+<g >
+<title>__libc_fork() (1 samples, 1.01%)</title><rect x="558.3" y="245" width="11.9" height="15.0" fill="rgb(243,123,43)" rx="2" ry="2" />
+<text  x="561.28" y="255.5" ></text>
+</g>
+<g >
+<title>__GI___libc_malloc(bytes=65) (1 samples, 1.01%)</title><rect x="10.0" y="149" width="11.9" height="15.0" fill="rgb(209,112,10)" rx="2" ry="2" />
+<text  x="13.00" y="159.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="141.1" y="229" width="11.9" height="15.0" fill="rgb(231,201,6)" rx="2" ry="2" />
+<text  x="144.11" y="239.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff8fb0, (1 samples, 1.01%)</title><rect x="629.8" y="277" width="11.9" height="15.0" fill="rgb(254,196,17)" rx="2" ry="2" />
+<text  x="632.80" y="287.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="582.1" y="261" width="11.9" height="15.0" fill="rgb(210,197,8)" rx="2" ry="2" />
+<text  x="585.12" y="271.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe6fb0, (1 samples, 1.01%)</title><rect x="188.8" y="277" width="11.9" height="15.0" fill="rgb(222,45,38)" rx="2" ry="2" />
+<text  x="191.79" y="287.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Map_base&lt;PageId, (5 samples, 5.05%)</title><rect x="760.9" y="181" width="59.6" height="15.0" fill="rgb(221,166,48)" rx="2" ry="2" />
+<text  x="763.91" y="191.5" >std::_..</text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff7ab0, (1 samples, 1.01%)</title><rect x="594.0" y="277" width="12.0" height="15.0" fill="rgb(242,182,18)" rx="2" ry="2" />
+<text  x="597.04" y="287.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="10.0" y="181" width="11.9" height="15.0" fill="rgb(213,45,19)" rx="2" ry="2" />
+<text  x="13.00" y="191.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="617.9" y="245" width="11.9" height="15.0" fill="rgb(245,166,30)" rx="2" ry="2" />
+<text  x="620.88" y="255.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Equal_helper&lt;PageId, (3 samples, 3.03%)</title><rect x="760.9" y="117" width="35.8" height="15.0" fill="rgb(229,123,20)" rx="2" ry="2" />
+<text  x="763.91" y="127.5" >std..</text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Little (1 samples, 1.01%)</title><rect x="33.8" y="261" width="12.0" height="15.0" fill="rgb(215,225,52)" rx="2" ry="2" />
+<text  x="36.84" y="271.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="415.3" y="213" width="11.9" height="15.0" fill="rgb(221,216,39)" rx="2" ry="2" />
+<text  x="418.25" y="223.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;PageId, (1 samples, 1.01%)</title><rect x="844.3" y="277" width="12.0" height="15.0" fill="rgb(213,29,29)" rx="2" ry="2" />
+<text  x="847.34" y="287.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff7a50, (1 samples, 1.01%)</title><rect x="582.1" y="277" width="11.9" height="15.0" fill="rgb(227,191,26)" rx="2" ry="2" />
+<text  x="585.12" y="287.5" ></text>
+</g>
+<g >
+<title>std::condition_variable::wait&lt;MultiThreadedPageRankComputer::CyclicBarrier::wait()::{lambda()#1}&gt;(std::unique_lock&lt;std::mutex&gt;&amp;,MultiThreadedPageRankComputer::CyclicBarrier::wait()::{lambda()#1}) (5 samples, 5.05%)</title><rect x="892.0" y="277" width="59.6" height="15.0" fill="rgb(215,23,30)" rx="2" ry="2" />
+<text  x="895.02" y="287.5" >std::c..</text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe2630, (1 samples, 1.01%)</title><rect x="93.4" y="277" width="12.0" height="15.0" fill="rgb(230,227,35)" rx="2" ry="2" />
+<text  x="96.43" y="287.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="296.1" y="229" width="11.9" height="15.0" fill="rgb(211,182,11)" rx="2" ry="2" />
+<text  x="299.06" y="239.5" ></text>
+</g>
+<g >
+<title>__pthread_cond_wait (5 samples, 5.05%)</title><rect x="892.0" y="245" width="59.6" height="15.0" fill="rgb(251,89,35)" rx="2" ry="2" />
+<text  x="895.02" y="255.5" >__pthr..</text>
+</g>
+<g >
+<title>std::_Hashtable&lt;PageId, (1 samples, 1.01%)</title><rect x="713.2" y="165" width="12.0" height="15.0" fill="rgb(217,76,46)" rx="2" ry="2" />
+<text  x="716.23" y="175.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="343.7" y="261" width="12.0" height="15.0" fill="rgb(242,154,49)" rx="2" ry="2" />
+<text  x="346.74" y="271.5" ></text>
+</g>
+<g >
+<title>__gnu_cxx::stdio_sync_filebuf&lt;char,std::char_traits&lt;char&gt; (1 samples, 1.01%)</title><rect x="880.1" y="277" width="11.9" height="15.0" fill="rgb(209,123,30)" rx="2" ry="2" />
+<text  x="883.10" y="287.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Little (1 samples, 1.01%)</title><rect x="427.2" y="261" width="11.9" height="15.0" fill="rgb(237,173,45)" rx="2" ry="2" />
+<text  x="430.17" y="271.5" ></text>
+</g>
+<g >
+<title>PageId::PageId (1 samples, 1.01%)</title><rect x="81.5" y="245" width="11.9" height="15.0" fill="rgb(217,212,3)" rx="2" ry="2" />
+<text  x="84.52" y="255.5" ></text>
+</g>
+<g >
+<title>std::operator==&lt;char&gt; (1 samples, 1.01%)</title><rect x="784.7" y="69" width="12.0" height="15.0" fill="rgb(208,0,25)" rx="2" ry="2" />
+<text  x="787.75" y="79.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="534.4" y="213" width="12.0" height="15.0" fill="rgb(239,205,33)" rx="2" ry="2" />
+<text  x="537.44" y="223.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="510.6" y="229" width="11.9" height="15.0" fill="rgb(221,51,20)" rx="2" ry="2" />
+<text  x="513.61" y="239.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="296.1" y="181" width="11.9" height="15.0" fill="rgb(233,31,47)" rx="2" ry="2" />
+<text  x="299.06" y="191.5" ></text>
+</g>
+<g >
+<title>std::thread::_Invoker&lt;std::tuple&lt;void (15 samples, 15.15%)</title><rect x="653.6" y="277" width="178.8" height="15.0" fill="rgb(225,100,9)" rx="2" ry="2" />
+<text  x="656.64" y="287.5" >std::thread::_Invoker&lt;s..</text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="260.3" y="261" width="11.9" height="15.0" fill="rgb(207,183,14)" rx="2" ry="2" />
+<text  x="263.30" y="271.5" ></text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="427.2" y="229" width="11.9" height="15.0" fill="rgb(211,187,21)" rx="2" ry="2" />
+<text  x="430.17" y="239.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;MultiThreadedPageRankComputer::ThreadRAII, (18 samples, 18.18%)</title><rect x="951.6" y="277" width="214.6" height="15.0" fill="rgb(224,110,0)" rx="2" ry="2" />
+<text  x="954.62" y="287.5" >std::vector&lt;MultiThreadedPag..</text>
+</g>
+<g >
+<title>PageIdHash::operator() (1 samples, 1.01%)</title><rect x="808.6" y="149" width="11.9" height="15.0" fill="rgb(227,55,9)" rx="2" ry="2" />
+<text  x="811.59" y="159.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="451.0" y="229" width="11.9" height="15.0" fill="rgb(218,228,2)" rx="2" ry="2" />
+<text  x="454.01" y="239.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff41b0, (1 samples, 1.01%)</title><rect x="474.8" y="277" width="12.0" height="15.0" fill="rgb(216,177,44)" rx="2" ry="2" />
+<text  x="477.85" y="287.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="45.8" y="261" width="11.9" height="15.0" fill="rgb(240,78,38)" rx="2" ry="2" />
+<text  x="48.76" y="271.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="606.0" y="245" width="11.9" height="15.0" fill="rgb(231,229,30)" rx="2" ry="2" />
+<text  x="608.96" y="255.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="117.3" y="229" width="11.9" height="15.0" fill="rgb(221,96,44)" rx="2" ry="2" />
+<text  x="120.27" y="239.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="164.9" y="229" width="12.0" height="15.0" fill="rgb(247,85,6)" rx="2" ry="2" />
+<text  x="167.95" y="239.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Huge (1 samples, 1.01%)</title><rect x="570.2" y="261" width="11.9" height="15.0" fill="rgb(218,113,32)" rx="2" ry="2" />
+<text  x="573.20" y="271.5" ></text>
+</g>
+<g >
+<title>__lll_lock_wait_private (1 samples, 1.01%)</title><rect x="296.1" y="133" width="11.9" height="15.0" fill="rgb(235,169,5)" rx="2" ry="2" />
+<text  x="299.06" y="143.5" ></text>
+</g>
+<g >
+<title>__GI___pthread_timedjoin_ex(threadid=139642115266304, (18 samples, 18.18%)</title><rect x="951.6" y="165" width="214.6" height="15.0" fill="rgb(207,61,8)" rx="2" ry="2" />
+<text  x="954.62" y="175.5" >__GI___pthread_timedjoin_ex(..</text>
+</g>
+<g >
+<title>arch_fork (1 samples, 1.01%)</title><rect x="212.6" y="229" width="11.9" height="15.0" fill="rgb(206,169,48)" rx="2" ry="2" />
+<text  x="215.63" y="239.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff52f0, (1 samples, 1.01%)</title><rect x="522.5" y="277" width="11.9" height="15.0" fill="rgb(251,11,24)" rx="2" ry="2" />
+<text  x="525.53" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="546.4" y="229" width="11.9" height="15.0" fill="rgb(243,78,32)" rx="2" ry="2" />
+<text  x="549.36" y="239.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe2690, (1 samples, 1.01%)</title><rect x="105.4" y="277" width="11.9" height="15.0" fill="rgb(234,28,49)" rx="2" ry="2" />
+<text  x="108.35" y="287.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff42d0, (1 samples, 1.01%)</title><rect x="486.8" y="277" width="11.9" height="15.0" fill="rgb(249,125,20)" rx="2" ry="2" />
+<text  x="489.77" y="287.5" ></text>
+</g>
+<g >
+<title>std::_Hash_impl::hash(__seed=3339675911, (1 samples, 1.01%)</title><rect x="808.6" y="117" width="11.9" height="15.0" fill="rgb(248,49,43)" rx="2" ry="2" />
+<text  x="811.59" y="127.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fea8b0, (1 samples, 1.01%)</title><rect x="284.1" y="277" width="12.0" height="15.0" fill="rgb(233,69,28)" rx="2" ry="2" />
+<text  x="287.14" y="287.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId (1 samples, 1.01%)</title><rect x="415.3" y="261" width="11.9" height="15.0" fill="rgb(253,162,14)" rx="2" ry="2" />
+<text  x="418.25" y="271.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff4330, (1 samples, 1.01%)</title><rect x="498.7" y="277" width="11.9" height="15.0" fill="rgb(231,25,23)" rx="2" ry="2" />
+<text  x="501.69" y="287.5" ></text>
+</g>
+<g >
+<title>std::basic_istream&lt;char,std::char_traits&lt;char&gt; (1 samples, 1.01%)</title><rect x="832.4" y="309" width="11.9" height="15.0" fill="rgb(215,125,46)" rx="2" ry="2" />
+<text  x="835.42" y="319.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff5290, (1 samples, 1.01%)</title><rect x="510.6" y="277" width="11.9" height="15.0" fill="rgb(233,199,38)" rx="2" ry="2" />
+<text  x="513.61" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="272.2" y="245" width="11.9" height="15.0" fill="rgb(239,24,7)" rx="2" ry="2" />
+<text  x="275.22" y="255.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="331.8" y="261" width="11.9" height="15.0" fill="rgb(226,117,12)" rx="2" ry="2" />
+<text  x="334.82" y="271.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fec350, (1 samples, 1.01%)</title><rect x="319.9" y="277" width="11.9" height="15.0" fill="rgb(244,77,22)" rx="2" ry="2" />
+<text  x="322.90" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="582.1" y="229" width="11.9" height="15.0" fill="rgb(226,5,5)" rx="2" ry="2" />
+<text  x="585.12" y="239.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="367.6" y="181" width="11.9" height="15.0" fill="rgb(217,68,31)" rx="2" ry="2" />
+<text  x="370.58" y="191.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="403.3" y="261" width="12.0" height="15.0" fill="rgb(206,78,11)" rx="2" ry="2" />
+<text  x="406.33" y="271.5" ></text>
+</g>
+<g >
+<title>__libc_fork (1 samples, 1.01%)</title><rect x="141.1" y="245" width="11.9" height="15.0" fill="rgb(247,226,11)" rx="2" ry="2" />
+<text  x="144.11" y="255.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe8bd0, (1 samples, 1.01%)</title><rect x="224.5" y="277" width="12.0" height="15.0" fill="rgb(234,90,46)" rx="2" ry="2" />
+<text  x="227.55" y="287.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="224.5" y="213" width="12.0" height="15.0" fill="rgb(240,38,21)" rx="2" ry="2" />
+<text  x="227.55" y="223.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="629.8" y="229" width="11.9" height="15.0" fill="rgb(240,170,18)" rx="2" ry="2" />
+<text  x="632.80" y="239.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff8f50, (1 samples, 1.01%)</title><rect x="617.9" y="277" width="11.9" height="15.0" fill="rgb(252,196,18)" rx="2" ry="2" />
+<text  x="620.88" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="93.4" y="229" width="12.0" height="15.0" fill="rgb(230,140,10)" rx="2" ry="2" />
+<text  x="96.43" y="239.5" ></text>
+</g>
+<g >
+<title>std::atomic_compare_exchange_weak_explicit&lt;double&gt; (5 samples, 5.05%)</title><rect x="653.6" y="165" width="59.6" height="15.0" fill="rgb(221,206,1)" rx="2" ry="2" />
+<text  x="656.64" y="175.5" >std::a..</text>
+</g>
+<g >
+<title>std::atomic_compare_exchange_weak&lt;double&gt; (5 samples, 5.05%)</title><rect x="653.6" y="181" width="59.6" height="15.0" fill="rgb(226,225,9)" rx="2" ry="2" />
+<text  x="656.64" y="191.5" >std::a..</text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="379.5" y="245" width="11.9" height="15.0" fill="rgb(209,152,46)" rx="2" ry="2" />
+<text  x="382.49" y="255.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="272.2" y="261" width="11.9" height="15.0" fill="rgb(209,88,42)" rx="2" ry="2" />
+<text  x="275.22" y="271.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="629.8" y="213" width="11.9" height="15.0" fill="rgb(245,74,26)" rx="2" ry="2" />
+<text  x="632.80" y="223.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=&quot;Stupid (1 samples, 1.01%)</title><rect x="319.9" y="261" width="11.9" height="15.0" fill="rgb(243,197,29)" rx="2" ry="2" />
+<text  x="322.90" y="271.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff2e30, (1 samples, 1.01%)</title><rect x="439.1" y="277" width="11.9" height="15.0" fill="rgb(242,7,15)" rx="2" ry="2" />
+<text  x="442.09" y="287.5" ></text>
+</g>
+<g >
+<title>std::_Hashtable&lt;PageId, (4 samples, 4.04%)</title><rect x="760.9" y="165" width="47.7" height="15.0" fill="rgb(238,125,47)" rx="2" ry="2" />
+<text  x="763.91" y="175.5" >std:..</text>
+</g>
+<g >
+<title>Page::addLink (1 samples, 1.01%)</title><rect x="844.3" y="309" width="12.0" height="15.0" fill="rgb(232,137,30)" rx="2" ry="2" />
+<text  x="847.34" y="319.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6ff2ef0, (1 samples, 1.01%)</title><rect x="462.9" y="277" width="11.9" height="15.0" fill="rgb(239,156,32)" rx="2" ry="2" />
+<text  x="465.93" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="236.5" y="245" width="11.9" height="15.0" fill="rgb(208,196,44)" rx="2" ry="2" />
+<text  x="239.46" y="255.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="81.5" y="213" width="11.9" height="15.0" fill="rgb(206,26,46)" rx="2" ry="2" />
+<text  x="84.52" y="223.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="129.2" y="245" width="11.9" height="15.0" fill="rgb(241,128,35)" rx="2" ry="2" />
+<text  x="132.19" y="255.5" ></text>
+</g>
+<g >
+<title>Sha256IdGenerator::generateId(content=..., (1 samples, 1.01%)</title><rect x="617.9" y="261" width="11.9" height="15.0" fill="rgb(235,53,38)" rx="2" ry="2" />
+<text  x="620.88" y="271.5" ></text>
+</g>
+<g >
+<title>std::hash&lt;std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="808.6" y="133" width="11.9" height="15.0" fill="rgb(250,122,32)" rx="2" ry="2" />
+<text  x="811.59" y="143.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="57.7" y="245" width="11.9" height="15.0" fill="rgb(248,28,10)" rx="2" ry="2" />
+<text  x="60.68" y="255.5" ></text>
+</g>
+<g >
+<title>std::basic_istream&lt;char,std::char_traits&lt;char&gt; (3 samples, 3.03%)</title><rect x="856.3" y="293" width="35.7" height="15.0" fill="rgb(214,123,22)" rx="2" ry="2" />
+<text  x="859.26" y="303.5" >std..</text>
+</g>
+<g >
+<title>std::allocator_traits&lt;std::allocator&lt;std::pair&lt;PageId, (2 samples, 2.02%)</title><rect x="1166.2" y="261" width="23.8" height="15.0" fill="rgb(254,183,32)" rx="2" ry="2" />
+<text  x="1169.16" y="271.5" >s..</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="164.9" y="197" width="12.0" height="15.0" fill="rgb(205,91,35)" rx="2" ry="2" />
+<text  x="167.95" y="207.5" ></text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char, (1 samples, 1.01%)</title><rect x="367.6" y="213" width="11.9" height="15.0" fill="rgb(226,50,33)" rx="2" ry="2" />
+<text  x="370.58" y="223.5" ></text>
+</g>
+<g >
+<title>MultiThreadedPageRankComputer::atomic_increase (5 samples, 5.05%)</title><rect x="653.6" y="197" width="59.6" height="15.0" fill="rgb(236,205,20)" rx="2" ry="2" />
+<text  x="656.64" y="207.5" >MultiT..</text>
+</g>
+<g >
+<title>std::__cxx11::basic_string&lt;char,std::char_traits&lt;char&gt;, (1 samples, 1.01%)</title><rect x="224.5" y="181" width="12.0" height="15.0" fill="rgb(221,13,47)" rx="2" ry="2" />
+<text  x="227.55" y="191.5" ></text>
+</g>
+<g >
+<title>Page::generateId(this=0x7f00f6fe0d10, (1 samples, 1.01%)</title><rect x="57.7" y="277" width="11.9" height="15.0" fill="rgb(243,194,2)" rx="2" ry="2" />
+<text  x="60.68" y="287.5" ></text>
+</g>
+<g >
+<title>__libc_read (1 samples, 1.01%)</title><rect x="439.1" y="245" width="11.9" height="15.0" fill="rgb(206,51,51)" rx="2" ry="2" />
+<text  x="442.09" y="255.5" ></text>
+</g>
+<g >
+<title>std::__detail::_Hash_code_base&lt;PageId, (1 samples, 1.01%)</title><rect x="808.6" y="165" width="11.9" height="15.0" fill="rgb(220,161,0)" rx="2" ry="2" />
+<text  x="811.59" y="175.5" ></text>
+</g>
+</g>
+</svg>
