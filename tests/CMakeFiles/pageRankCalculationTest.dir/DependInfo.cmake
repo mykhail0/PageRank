@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/pageRankCalculationTest.cpp" "/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/CMakeFiles/pageRankCalculationTest.dir/pageRankCalculationTest.cpp.o"
+  "/home/misza/studia/sem3/pw/PageRank/tests/pageRankCalculationTest.cpp" "/home/misza/studia/sem3/pw/PageRank/tests/CMakeFiles/pageRankCalculationTest.dir/pageRankCalculationTest.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 

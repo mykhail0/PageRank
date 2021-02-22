@@ -1,4 +1,4 @@
-# Install script for directory: /home/students/inf/m/ms420826/studia/sem3/pw/PageRank
+# Install script for directory: /home/misza/studia/sem3/pw/PageRank
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -39,7 +39,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/cmake_install.cmake")
+  include("/home/misza/studia/sem3/pw/PageRank/tests/cmake_install.cmake")
 
 endif()
 
@@ -51,5 +51,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/misza/studia/sem3/pw/PageRank/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
