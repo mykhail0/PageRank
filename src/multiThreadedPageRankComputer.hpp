@@ -24,7 +24,7 @@ public:
         // Setting up additional structures for the network.
         generateIds(network);
 
-        std::unordered_map<PageId, PageRank, PageIdHash> previousPageHashMap;
+        std::unordered_map<PageId, std::atomic<PageRank>, PageIdHash> previousPageHashMap, pageHashMap;
         std::unordered_map<PageId, uint32_t, PageIdHash> numLinks;
         std::vector<PageId> danglingNodes, pages;
         // <a, b> <=> a -> b
@@ -38,7 +38,9 @@ public:
             auto links_sz = page_links.size();
 
             pages.push_back(page_id);
-            previousPageHashMap[page_id] = 1.0 / network.getSize();
+            previousPageHashMap.emplace(page_id, 1.0 / network.getSize());
+            pageHashMap.emplace(page_id, 1.0 / network.getSize());
+            //previousPageHashMap[page_id] = 1.0 / network.getSize();
             numLinks[page_id] = links_sz;
             if (links_sz == 0)
                 danglingNodes.push_back(page_id);
@@ -46,12 +48,8 @@ public:
                 edges.push_back({ page_id, link });
         }
 
-        std::unordered_map<PageId, PageRank, PageIdHash> pageHashMap { previousPageHashMap };
-        std::vector<std::unordered_map<PageId, PageRank, PageIdHash>> pageHashMaps(numThreads);
-
         // Partial values for each thread.
         std::vector<double> dangleSums(numThreads, 0), differences(numThreads, 0);
-        // FIXME Maybe volatile is enough?
         std::atomic<double> dangleSum { 0 };
 
         // Setting up thread specific and synchronization structures.
@@ -76,7 +74,6 @@ public:
                                     std::ref(edges),
                                     std::ref(previousPageHashMap),
                                     std::ref(pageHashMap),
-                                    std::ref(pageHashMaps[i]),
                                     std::ref(dangleSums[i]),
                                     std::ref(differences[i]) },
                 ThreadRAII::DtorAction::join });
@@ -96,16 +93,11 @@ public:
             barrier.goOn();
 
             barrier.wait();
-            // Partial PageRanks partially calculated.
+            // PageRanks partially calculated.
             barrier.goOn();
 
             barrier.wait();
-            // Partial PageRanks calculated.
-            for (auto& hshmp : pageHashMaps) {
-                for (auto& pageMapElem : hshmp)
-                    pageHashMap[pageMapElem.first] += pageMapElem.second;
-            }
-
+            // PageRanks calculated.
             barrier.goOn();
 
             barrier.wait();
@@ -113,7 +105,9 @@ public:
             for (auto d : differences)
                 difference += d;
 
-            previousPageHashMap = pageHashMap;
+            barrier.goOn();
+            // previousPageHashMap recalculated.
+            barrier.wait();
 
             if (difference < tolerance) {
                 done = true;
@@ -122,7 +116,7 @@ public:
 
                 std::vector<PageIdAndRank> result;
                 for (auto const& page_id : pages)
-                    result.push_back(PageIdAndRank(page_id, pageHashMap[page_id]));
+                    result.push_back(PageIdAndRank(page_id, pageHashMap[page_id].load()));
 
                 ASSERT(result.size() == network.getSize(),
                     "Invalid result size=" << result.size() << ", for network" << network);
@@ -151,14 +145,16 @@ private:
     static void atomic_increase(std::atomic<double>& y, double x)
     {
         auto previous = y.load();
-        while (!atomic_compare_exchange_weak(&y, &previous, previous + x)) { }
+        while (!atomic_compare_exchange_weak(&y, &previous, previous + x)) {
+        }
     }
 
     // Atomic y *= x using CAS idiom.
     static void atomic_multiply(std::atomic<double>& y, double x)
     {
         auto previous = y.load();
-        while (!atomic_compare_exchange_weak(&y, &previous, previous * x)) { }
+        while (!atomic_compare_exchange_weak(&y, &previous, previous * x)) {
+        }
     }
 
     // Taken from labs, also featured in Meyers' C++ book.
@@ -296,10 +292,9 @@ private:
         std::unordered_map<PageId, uint32_t, PageIdHash> const& numLinks,
         std::vector<std::pair<PageId, PageId>> const& edges, // first -> second
         // First read, then write.
-        std::unordered_map<PageId, PageRank, PageIdHash>& previousPageHashMap,
+        std::unordered_map<PageId, std::atomic<PageRank>, PageIdHash>& previousPageHashMap,
         // Write only network data.
-        std::unordered_map<PageId, PageRank, PageIdHash>& pageHashMap,
-        std::unordered_map<PageId, PageRank, PageIdHash>& my_pages,
+        std::unordered_map<PageId, std::atomic<PageRank>, PageIdHash>& pageHashMap,
         double& myDangleSum,
         double& difference)
     {
@@ -311,7 +306,7 @@ private:
             // Calculate the weight of dangling nodes of this thread.
             uint64_t danglingSegment = danglingNodes.size() / numThreads + 1;
             for (uint64_t i = index * danglingSegment; i < (index + 1) * danglingSegment && i < danglingNodes.size(); ++i)
-                myDangleSum += previousPageHashMap.at(danglingNodes[i]);
+                myDangleSum += previousPageHashMap.at(danglingNodes[i]).load();
 
             barrier.await();
 
@@ -323,17 +318,25 @@ private:
 
             barrier.await();
 
-            my_pages.clear();
             // Increase PageRanks accordingly to the edge segment for this thread.
+            // FIXME maybe no need for atomic increase, just local sum and then
+            // sum in main
             uint64_t edgeSegment = edges.size() / numThreads + 1;
             for (uint64_t i = index * edgeSegment; i < (index + 1) * edgeSegment && i < edges.size(); ++i)
-                my_pages[edges[i].second] += alpha * previousPageHashMap.at(edges[i].first) / numLinks.at(edges[i].first);
+                atomic_increase(pageHashMap[edges[i].second], alpha * previousPageHashMap.at(edges[i].first).load() / numLinks.at(edges[i].first));
 
             barrier.await();
 
             // Calculate the difference for pages of this thread.
             for (uint64_t i = index * pageSegment; i < (index + 1) * pageSegment && i < pages.size(); ++i)
-                difference += std::abs(previousPageHashMap.at(pages[i]) - pageHashMap[pages[i]]);
+                difference += std::abs(previousPageHashMap.at(pages[i]).load() - pageHashMap[pages[i]].load());
+
+            barrier.await();
+
+            // Update previousPageHashMap.
+            // FIXME maybe too slow, maybe can copy
+            for (uint64_t i = index * pageSegment; i < (index + 1) * pageSegment && i < pages.size(); ++i)
+                previousPageHashMap[pages[i]] = pageHashMap[pages[i]].load();
 
             barrier.await();
         }

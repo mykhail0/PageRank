@@ -1,7 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/sha256Test.dir/sha256Test.cpp.o"
-  "sha256Test"
   "sha256Test.pdb"
+  "sha256Test"
 )
 
 # Per-language clean rules from dependency scanning.

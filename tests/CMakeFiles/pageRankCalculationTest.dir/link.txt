@@ -1,1 +1,1 @@
-/usr/bin/c++  -g -Wall -Wextra -Werror -O3 -DNDEBUG  -rdynamic CMakeFiles/pageRankCalculationTest.dir/pageRankCalculationTest.cpp.o  -o pageRankCalculationTest  -lpthread 
+/usr/bin/c++  -g -Wall -Wextra -Werror -O3 -DNDEBUG  -rdynamic CMakeFiles/pageRankCalculationTest.dir/pageRankCalculationTest.cpp.o  -o pageRankCalculationTest -lpthread 

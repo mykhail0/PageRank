@@ -21,14 +21,16 @@ using namespace std;
 static void atomic_increase(std::atomic<double>& y, double x)
 {
     auto previous = y.load();
-    while (!atomic_compare_exchange_weak(&y, &previous, previous + x)) { }
+    while (!atomic_compare_exchange_weak(&y, &previous, previous + x)) {
+    }
 }
 
 // Atomic y *= x using CAS idiom.
 static void atomic_multiply(std::atomic<double>& y, double x)
 {
     auto previous = y.load();
-    while (!atomic_compare_exchange_weak(&y, &previous, previous * x)) { }
+    while (!atomic_compare_exchange_weak(&y, &previous, previous * x)) {
+    }
 }
 
 // Taken from labs, also featured in Meyers' C++ book.

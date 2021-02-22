@@ -118,3 +118,54 @@ make: *** [Makefile:141: cmTC_410ec/fast] Error 2
 
 
 
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /home/students/inf/m/ms420826/studia/sem3/pw/PageRank/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_36249/fast"
+/usr/bin/make -f CMakeFiles/cmTC_36249.dir/build.make CMakeFiles/cmTC_36249.dir/build
+make[1]: Wejście do katalogu '/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_36249.dir/CheckSymbolExists.cxx.o
+/usr/bin/c++     -o CMakeFiles/cmTC_36249.dir/CheckSymbolExists.cxx.o -c /home/students/inf/m/ms420826/studia/sem3/pw/PageRank/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_36249
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_36249.dir/link.txt --verbose=1
+/usr/bin/c++       -rdynamic CMakeFiles/cmTC_36249.dir/CheckSymbolExists.cxx.o  -o cmTC_36249 
+/usr/bin/ld: CMakeFiles/cmTC_36249.dir/CheckSymbolExists.cxx.o: in function `main':
+CheckSymbolExists.cxx:(.text+0x1b): undefined reference to `pthread_create'
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_36249.dir/build.make:87: cmTC_36249] Błąd 1
+make[1]: Opuszczenie katalogu '/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_36249/fast] Błąd 2
+
+File /home/students/inf/m/ms420826/studia/sem3/pw/PageRank/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/students/inf/m/ms420826/studia/sem3/pw/PageRank/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/make" "cmTC_ef72e/fast"
+/usr/bin/make -f CMakeFiles/cmTC_ef72e.dir/build.make CMakeFiles/cmTC_ef72e.dir/build
+make[1]: Wejście do katalogu '/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_ef72e.dir/CheckFunctionExists.cxx.o
+/usr/bin/c++    -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTC_ef72e.dir/CheckFunctionExists.cxx.o -c /home/students/inf/m/ms420826/studia/sem3/pw/PageRank/CMakeFiles/CheckLibraryExists/CheckFunctionExists.cxx
+Linking CXX executable cmTC_ef72e
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ef72e.dir/link.txt --verbose=1
+/usr/bin/c++   -DCHECK_FUNCTION_EXISTS=pthread_create    -rdynamic CMakeFiles/cmTC_ef72e.dir/CheckFunctionExists.cxx.o  -o cmTC_ef72e -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+make[1]: *** [CMakeFiles/cmTC_ef72e.dir/build.make:87: cmTC_ef72e] Błąd 1
+make[1]: Opuszczenie katalogu '/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/CMakeFiles/CMakeTmp'
+make: *** [Makefile:121: cmTC_ef72e/fast] Błąd 2
+
+

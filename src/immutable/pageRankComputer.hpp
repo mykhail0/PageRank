@@ -14,7 +14,7 @@ public:
 
     virtual std::string getName() const = 0;
 
-    virtual ~PageRankComputer() { }
+    virtual ~PageRankComputer() {}
 };
 
 #endif // PAGE_RANK_COMPUTER_H_

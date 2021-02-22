@@ -1,7 +1,7 @@
 file(REMOVE_RECURSE
   "CMakeFiles/pageRankPerformanceTest.dir/pageRankPerformanceTest.cpp.o"
-  "pageRankPerformanceTest"
   "pageRankPerformanceTest.pdb"
+  "pageRankPerformanceTest"
 )
 
 # Per-language clean rules from dependency scanning.

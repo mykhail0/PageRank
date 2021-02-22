@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/misza/studia/sem3/pw/PageRank/src/immutable/common.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/common.hpp
 cerrno
 -
 cstring
@@ -16,21 +16,21 @@ iostream
 sstream
 -
 
-/home/misza/studia/sem3/pw/PageRank/src/immutable/idGenerator.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/idGenerator.hpp
 string
 -
 pageId.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageId.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageId.hpp
 
-/home/misza/studia/sem3/pw/PageRank/src/immutable/network.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/network.hpp
 vector
 -
 common.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/common.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/common.hpp
 page.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/page.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/page.hpp
 
-/home/misza/studia/sem3/pw/PageRank/src/immutable/page.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/page.hpp
 functional
 -
 iostream
@@ -40,31 +40,31 @@ optional
 vector
 -
 common.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/common.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/common.hpp
 idGenerator.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/idGenerator.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/idGenerator.hpp
 pageId.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageId.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageId.hpp
 
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageId.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageId.hpp
 string
 -
 
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
 common.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/common.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/common.hpp
 page.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/page.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/page.hpp
 
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageRankComputer.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageRankComputer.hpp
 vector
 -
 network.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/network.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/network.hpp
 pageIdAndRank.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
 
-/home/misza/studia/sem3/pw/PageRank/src/multiThreadedPageRankComputer.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/multiThreadedPageRankComputer.hpp
 numeric
 -
 unordered_map
@@ -80,13 +80,13 @@ mutex
 thread
 -
 immutable/network.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/network.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/network.hpp
 immutable/pageIdAndRank.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
 immutable/pageRankComputer.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageRankComputer.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageRankComputer.hpp
 
-/home/misza/studia/sem3/pw/PageRank/src/singleThreadedPageRankComputer.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/singleThreadedPageRankComputer.hpp
 unordered_map
 -
 unordered_set
@@ -94,17 +94,17 @@ unordered_set
 vector
 -
 immutable/network.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/network.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/network.hpp
 immutable/pageIdAndRank.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
 immutable/pageRankComputer.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageRankComputer.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageRankComputer.hpp
 
-/home/misza/studia/sem3/pw/PageRank/tests/lib/networkGenerator.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/./lib/networkGenerator.hpp
 ../../src/immutable/network.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/network.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/src/immutable/network.hpp
 
-/home/misza/studia/sem3/pw/PageRank/tests/lib/performanceTimer.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/./lib/performanceTimer.hpp
 chrono
 -
 iomanip
@@ -112,35 +112,35 @@ iomanip
 iostream
 -
 
-/home/misza/studia/sem3/pw/PageRank/tests/lib/resultVerificator.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/./lib/resultVerificator.hpp
 set
 -
 vector
 -
 networkGenerator.hpp
-/home/misza/studia/sem3/pw/PageRank/tests/lib/networkGenerator.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/./lib/networkGenerator.hpp
 ../../src/immutable/pageIdAndRank.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/src/immutable/pageIdAndRank.hpp
 
-/home/misza/studia/sem3/pw/PageRank/tests/lib/simpleIdGenerator.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/./lib/simpleIdGenerator.hpp
 ../../src/immutable/idGenerator.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/idGenerator.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/src/immutable/idGenerator.hpp
 
-/home/misza/studia/sem3/pw/PageRank/tests/pageRankPerformanceTest.cpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/pageRankPerformanceTest.cpp
 ../src/immutable/common.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/common.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/common.hpp
 ../src/immutable/pageIdAndRank.hpp
-/home/misza/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/immutable/pageIdAndRank.hpp
 ../src/multiThreadedPageRankComputer.hpp
-/home/misza/studia/sem3/pw/PageRank/src/multiThreadedPageRankComputer.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/multiThreadedPageRankComputer.hpp
 ../src/singleThreadedPageRankComputer.hpp
-/home/misza/studia/sem3/pw/PageRank/src/singleThreadedPageRankComputer.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/src/singleThreadedPageRankComputer.hpp
 ./lib/networkGenerator.hpp
-/home/misza/studia/sem3/pw/PageRank/tests/lib/networkGenerator.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/./lib/networkGenerator.hpp
 ./lib/performanceTimer.hpp
-/home/misza/studia/sem3/pw/PageRank/tests/lib/performanceTimer.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/./lib/performanceTimer.hpp
 ./lib/resultVerificator.hpp
-/home/misza/studia/sem3/pw/PageRank/tests/lib/resultVerificator.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/./lib/resultVerificator.hpp
 ./lib/simpleIdGenerator.hpp
-/home/misza/studia/sem3/pw/PageRank/tests/lib/simpleIdGenerator.hpp
+/home/students/inf/m/ms420826/studia/sem3/pw/PageRank/tests/./lib/simpleIdGenerator.hpp
 
