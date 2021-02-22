@@ -68,10 +68,10 @@ RM = /usr/local/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/misza/studia/sem3/pw/projekt++/PageRank
+CMAKE_SOURCE_DIR = /home/misza/studia/sem3/pw/PageRank
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/misza/studia/sem3/pw/projekt++/PageRank
+CMAKE_BINARY_DIR = /home/misza/studia/sem3/pw/PageRank
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -146,14 +146,14 @@ install/local/fast: preinstall/fast
 
 # The main all target
 all: cmake_check_build_system
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles /home/misza/studia/sem3/pw/projekt++/PageRank/tests/CMakeFiles/progress.marks
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles 0
+	cd /home/misza/studia/sem3/pw/PageRank && $(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/PageRank/CMakeFiles /home/misza/studia/sem3/pw/PageRank/tests/CMakeFiles/progress.marks
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/PageRank/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/clean
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/clean
 .PHONY : clean
 
 # The main clean target
@@ -163,22 +163,22 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/preinstall
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/preinstall
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /home/misza/studia/sem3/pw/PageRank && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Convenience name for target.
 tests/CMakeFiles/e2eTest.dir/rule:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/e2eTest.dir/rule
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/e2eTest.dir/rule
 .PHONY : tests/CMakeFiles/e2eTest.dir/rule
 
 # Convenience name for target.
@@ -188,12 +188,12 @@ e2eTest: tests/CMakeFiles/e2eTest.dir/rule
 
 # fast build rule for target.
 e2eTest/fast:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/e2eTest.dir/build.make tests/CMakeFiles/e2eTest.dir/build
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/e2eTest.dir/build.make tests/CMakeFiles/e2eTest.dir/build
 .PHONY : e2eTest/fast
 
 # Convenience name for target.
 tests/CMakeFiles/pageRankPerformanceTest.dir/rule:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/pageRankPerformanceTest.dir/rule
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/pageRankPerformanceTest.dir/rule
 .PHONY : tests/CMakeFiles/pageRankPerformanceTest.dir/rule
 
 # Convenience name for target.
@@ -203,12 +203,12 @@ pageRankPerformanceTest: tests/CMakeFiles/pageRankPerformanceTest.dir/rule
 
 # fast build rule for target.
 pageRankPerformanceTest/fast:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankPerformanceTest.dir/build.make tests/CMakeFiles/pageRankPerformanceTest.dir/build
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankPerformanceTest.dir/build.make tests/CMakeFiles/pageRankPerformanceTest.dir/build
 .PHONY : pageRankPerformanceTest/fast
 
 # Convenience name for target.
 tests/CMakeFiles/pageRankCalculationTest.dir/rule:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/pageRankCalculationTest.dir/rule
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/pageRankCalculationTest.dir/rule
 .PHONY : tests/CMakeFiles/pageRankCalculationTest.dir/rule
 
 # Convenience name for target.
@@ -218,12 +218,12 @@ pageRankCalculationTest: tests/CMakeFiles/pageRankCalculationTest.dir/rule
 
 # fast build rule for target.
 pageRankCalculationTest/fast:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankCalculationTest.dir/build.make tests/CMakeFiles/pageRankCalculationTest.dir/build
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankCalculationTest.dir/build.make tests/CMakeFiles/pageRankCalculationTest.dir/build
 .PHONY : pageRankCalculationTest/fast
 
 # Convenience name for target.
 tests/CMakeFiles/sha256Test.dir/rule:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/sha256Test.dir/rule
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/sha256Test.dir/rule
 .PHONY : tests/CMakeFiles/sha256Test.dir/rule
 
 # Convenience name for target.
@@ -233,7 +233,7 @@ sha256Test: tests/CMakeFiles/sha256Test.dir/rule
 
 # fast build rule for target.
 sha256Test/fast:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/sha256Test.dir/build.make tests/CMakeFiles/sha256Test.dir/build
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/sha256Test.dir/build.make tests/CMakeFiles/sha256Test.dir/build
 .PHONY : sha256Test/fast
 
 e2eTest.o: e2eTest.cpp.o
@@ -242,7 +242,7 @@ e2eTest.o: e2eTest.cpp.o
 
 # target to build an object file
 e2eTest.cpp.o:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/e2eTest.dir/build.make tests/CMakeFiles/e2eTest.dir/e2eTest.cpp.o
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/e2eTest.dir/build.make tests/CMakeFiles/e2eTest.dir/e2eTest.cpp.o
 .PHONY : e2eTest.cpp.o
 
 e2eTest.i: e2eTest.cpp.i
@@ -251,7 +251,7 @@ e2eTest.i: e2eTest.cpp.i
 
 # target to preprocess a source file
 e2eTest.cpp.i:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/e2eTest.dir/build.make tests/CMakeFiles/e2eTest.dir/e2eTest.cpp.i
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/e2eTest.dir/build.make tests/CMakeFiles/e2eTest.dir/e2eTest.cpp.i
 .PHONY : e2eTest.cpp.i
 
 e2eTest.s: e2eTest.cpp.s
@@ -260,7 +260,7 @@ e2eTest.s: e2eTest.cpp.s
 
 # target to generate assembly for a file
 e2eTest.cpp.s:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/e2eTest.dir/build.make tests/CMakeFiles/e2eTest.dir/e2eTest.cpp.s
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/e2eTest.dir/build.make tests/CMakeFiles/e2eTest.dir/e2eTest.cpp.s
 .PHONY : e2eTest.cpp.s
 
 pageRankCalculationTest.o: pageRankCalculationTest.cpp.o
@@ -269,7 +269,7 @@ pageRankCalculationTest.o: pageRankCalculationTest.cpp.o
 
 # target to build an object file
 pageRankCalculationTest.cpp.o:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankCalculationTest.dir/build.make tests/CMakeFiles/pageRankCalculationTest.dir/pageRankCalculationTest.cpp.o
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankCalculationTest.dir/build.make tests/CMakeFiles/pageRankCalculationTest.dir/pageRankCalculationTest.cpp.o
 .PHONY : pageRankCalculationTest.cpp.o
 
 pageRankCalculationTest.i: pageRankCalculationTest.cpp.i
@@ -278,7 +278,7 @@ pageRankCalculationTest.i: pageRankCalculationTest.cpp.i
 
 # target to preprocess a source file
 pageRankCalculationTest.cpp.i:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankCalculationTest.dir/build.make tests/CMakeFiles/pageRankCalculationTest.dir/pageRankCalculationTest.cpp.i
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankCalculationTest.dir/build.make tests/CMakeFiles/pageRankCalculationTest.dir/pageRankCalculationTest.cpp.i
 .PHONY : pageRankCalculationTest.cpp.i
 
 pageRankCalculationTest.s: pageRankCalculationTest.cpp.s
@@ -287,7 +287,7 @@ pageRankCalculationTest.s: pageRankCalculationTest.cpp.s
 
 # target to generate assembly for a file
 pageRankCalculationTest.cpp.s:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankCalculationTest.dir/build.make tests/CMakeFiles/pageRankCalculationTest.dir/pageRankCalculationTest.cpp.s
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankCalculationTest.dir/build.make tests/CMakeFiles/pageRankCalculationTest.dir/pageRankCalculationTest.cpp.s
 .PHONY : pageRankCalculationTest.cpp.s
 
 pageRankPerformanceTest.o: pageRankPerformanceTest.cpp.o
@@ -296,7 +296,7 @@ pageRankPerformanceTest.o: pageRankPerformanceTest.cpp.o
 
 # target to build an object file
 pageRankPerformanceTest.cpp.o:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankPerformanceTest.dir/build.make tests/CMakeFiles/pageRankPerformanceTest.dir/pageRankPerformanceTest.cpp.o
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankPerformanceTest.dir/build.make tests/CMakeFiles/pageRankPerformanceTest.dir/pageRankPerformanceTest.cpp.o
 .PHONY : pageRankPerformanceTest.cpp.o
 
 pageRankPerformanceTest.i: pageRankPerformanceTest.cpp.i
@@ -305,7 +305,7 @@ pageRankPerformanceTest.i: pageRankPerformanceTest.cpp.i
 
 # target to preprocess a source file
 pageRankPerformanceTest.cpp.i:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankPerformanceTest.dir/build.make tests/CMakeFiles/pageRankPerformanceTest.dir/pageRankPerformanceTest.cpp.i
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankPerformanceTest.dir/build.make tests/CMakeFiles/pageRankPerformanceTest.dir/pageRankPerformanceTest.cpp.i
 .PHONY : pageRankPerformanceTest.cpp.i
 
 pageRankPerformanceTest.s: pageRankPerformanceTest.cpp.s
@@ -314,7 +314,7 @@ pageRankPerformanceTest.s: pageRankPerformanceTest.cpp.s
 
 # target to generate assembly for a file
 pageRankPerformanceTest.cpp.s:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankPerformanceTest.dir/build.make tests/CMakeFiles/pageRankPerformanceTest.dir/pageRankPerformanceTest.cpp.s
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankPerformanceTest.dir/build.make tests/CMakeFiles/pageRankPerformanceTest.dir/pageRankPerformanceTest.cpp.s
 .PHONY : pageRankPerformanceTest.cpp.s
 
 sha256Test.o: sha256Test.cpp.o
@@ -323,7 +323,7 @@ sha256Test.o: sha256Test.cpp.o
 
 # target to build an object file
 sha256Test.cpp.o:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/sha256Test.dir/build.make tests/CMakeFiles/sha256Test.dir/sha256Test.cpp.o
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/sha256Test.dir/build.make tests/CMakeFiles/sha256Test.dir/sha256Test.cpp.o
 .PHONY : sha256Test.cpp.o
 
 sha256Test.i: sha256Test.cpp.i
@@ -332,7 +332,7 @@ sha256Test.i: sha256Test.cpp.i
 
 # target to preprocess a source file
 sha256Test.cpp.i:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/sha256Test.dir/build.make tests/CMakeFiles/sha256Test.dir/sha256Test.cpp.i
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/sha256Test.dir/build.make tests/CMakeFiles/sha256Test.dir/sha256Test.cpp.i
 .PHONY : sha256Test.cpp.i
 
 sha256Test.s: sha256Test.cpp.s
@@ -341,7 +341,7 @@ sha256Test.s: sha256Test.cpp.s
 
 # target to generate assembly for a file
 sha256Test.cpp.s:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/sha256Test.dir/build.make tests/CMakeFiles/sha256Test.dir/sha256Test.cpp.s
+	cd /home/misza/studia/sem3/pw/PageRank && $(MAKE) $(MAKESILENT) -f tests/CMakeFiles/sha256Test.dir/build.make tests/CMakeFiles/sha256Test.dir/sha256Test.cpp.s
 .PHONY : sha256Test.cpp.s
 
 # Help Target
@@ -383,6 +383,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /home/misza/studia/sem3/pw/projekt++/PageRank && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /home/misza/studia/sem3/pw/PageRank && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

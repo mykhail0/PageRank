@@ -64,10 +64,10 @@ RM = /usr/local/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/misza/studia/sem3/pw/projekt++/PageRank
+CMAKE_SOURCE_DIR = /home/misza/studia/sem3/pw/PageRank
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/misza/studia/sem3/pw/projekt++/PageRank
+CMAKE_BINARY_DIR = /home/misza/studia/sem3/pw/PageRank
 
 #=============================================================================
 # Directory level rules for the build root directory
@@ -118,14 +118,14 @@ tests/clean: tests/CMakeFiles/sha256Test.dir/clean
 tests/CMakeFiles/e2eTest.dir/all:
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/e2eTest.dir/build.make tests/CMakeFiles/e2eTest.dir/depend
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/e2eTest.dir/build.make tests/CMakeFiles/e2eTest.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles --progress-num=1,2 "Built target e2eTest"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/misza/studia/sem3/pw/PageRank/CMakeFiles --progress-num=1,2 "Built target e2eTest"
 .PHONY : tests/CMakeFiles/e2eTest.dir/all
 
 # Build rule for subdir invocation for target.
 tests/CMakeFiles/e2eTest.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/PageRank/CMakeFiles 2
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/e2eTest.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/PageRank/CMakeFiles 0
 .PHONY : tests/CMakeFiles/e2eTest.dir/rule
 
 # Convenience name for target.
@@ -145,14 +145,14 @@ tests/CMakeFiles/e2eTest.dir/clean:
 tests/CMakeFiles/pageRankPerformanceTest.dir/all:
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankPerformanceTest.dir/build.make tests/CMakeFiles/pageRankPerformanceTest.dir/depend
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankPerformanceTest.dir/build.make tests/CMakeFiles/pageRankPerformanceTest.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles --progress-num=5,6 "Built target pageRankPerformanceTest"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/misza/studia/sem3/pw/PageRank/CMakeFiles --progress-num=5,6 "Built target pageRankPerformanceTest"
 .PHONY : tests/CMakeFiles/pageRankPerformanceTest.dir/all
 
 # Build rule for subdir invocation for target.
 tests/CMakeFiles/pageRankPerformanceTest.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/PageRank/CMakeFiles 2
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/pageRankPerformanceTest.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/PageRank/CMakeFiles 0
 .PHONY : tests/CMakeFiles/pageRankPerformanceTest.dir/rule
 
 # Convenience name for target.
@@ -172,14 +172,14 @@ tests/CMakeFiles/pageRankPerformanceTest.dir/clean:
 tests/CMakeFiles/pageRankCalculationTest.dir/all:
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankCalculationTest.dir/build.make tests/CMakeFiles/pageRankCalculationTest.dir/depend
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/pageRankCalculationTest.dir/build.make tests/CMakeFiles/pageRankCalculationTest.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles --progress-num=3,4 "Built target pageRankCalculationTest"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/misza/studia/sem3/pw/PageRank/CMakeFiles --progress-num=3,4 "Built target pageRankCalculationTest"
 .PHONY : tests/CMakeFiles/pageRankCalculationTest.dir/all
 
 # Build rule for subdir invocation for target.
 tests/CMakeFiles/pageRankCalculationTest.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/PageRank/CMakeFiles 2
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/pageRankCalculationTest.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/PageRank/CMakeFiles 0
 .PHONY : tests/CMakeFiles/pageRankCalculationTest.dir/rule
 
 # Convenience name for target.
@@ -199,14 +199,14 @@ tests/CMakeFiles/pageRankCalculationTest.dir/clean:
 tests/CMakeFiles/sha256Test.dir/all:
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/sha256Test.dir/build.make tests/CMakeFiles/sha256Test.dir/depend
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/sha256Test.dir/build.make tests/CMakeFiles/sha256Test.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles --progress-num=7,8 "Built target sha256Test"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/misza/studia/sem3/pw/PageRank/CMakeFiles --progress-num=7,8 "Built target sha256Test"
 .PHONY : tests/CMakeFiles/sha256Test.dir/all
 
 # Build rule for subdir invocation for target.
 tests/CMakeFiles/sha256Test.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/PageRank/CMakeFiles 2
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 tests/CMakeFiles/sha256Test.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/projekt++/PageRank/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/misza/studia/sem3/pw/PageRank/CMakeFiles 0
 .PHONY : tests/CMakeFiles/sha256Test.dir/rule
 
 # Convenience name for target.

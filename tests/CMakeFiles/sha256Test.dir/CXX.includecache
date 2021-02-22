@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/misza/studia/sem3/pw/projekt++/PageRank/src/immutable/common.hpp
+/home/misza/studia/sem3/pw/PageRank/src/immutable/common.hpp
 cerrno
 -
 cstring
@@ -16,17 +16,19 @@ iostream
 sstream
 -
 
-/home/misza/studia/sem3/pw/projekt++/PageRank/src/immutable/idGenerator.hpp
+/home/misza/studia/sem3/pw/PageRank/src/immutable/idGenerator.hpp
 string
 -
 pageId.hpp
-/home/misza/studia/sem3/pw/projekt++/PageRank/src/immutable/pageId.hpp
+/home/misza/studia/sem3/pw/PageRank/src/immutable/pageId.hpp
 
-/home/misza/studia/sem3/pw/projekt++/PageRank/src/immutable/pageId.hpp
+/home/misza/studia/sem3/pw/PageRank/src/immutable/pageId.hpp
 string
 -
 
-/home/misza/studia/sem3/pw/projekt++/PageRank/src/sha256IdGenerator.hpp
+/home/misza/studia/sem3/pw/PageRank/src/sha256IdGenerator.hpp
+fcntl.h
+-
 sys/types.h
 -
 sys/wait.h
@@ -34,15 +36,15 @@ sys/wait.h
 unistd.h
 -
 immutable/common.hpp
-/home/misza/studia/sem3/pw/projekt++/PageRank/src/immutable/common.hpp
+/home/misza/studia/sem3/pw/PageRank/src/immutable/common.hpp
 immutable/idGenerator.hpp
-/home/misza/studia/sem3/pw/projekt++/PageRank/src/immutable/idGenerator.hpp
+/home/misza/studia/sem3/pw/PageRank/src/immutable/idGenerator.hpp
 immutable/pageId.hpp
-/home/misza/studia/sem3/pw/projekt++/PageRank/src/immutable/pageId.hpp
+/home/misza/studia/sem3/pw/PageRank/src/immutable/pageId.hpp
 
-/home/misza/studia/sem3/pw/projekt++/PageRank/tests/sha256Test.cpp
+/home/misza/studia/sem3/pw/PageRank/tests/sha256Test.cpp
 ../src/immutable/common.hpp
-/home/misza/studia/sem3/pw/projekt++/PageRank/src/immutable/common.hpp
+/home/misza/studia/sem3/pw/PageRank/src/immutable/common.hpp
 ../src/sha256IdGenerator.hpp
-/home/misza/studia/sem3/pw/projekt++/PageRank/src/sha256IdGenerator.hpp
+/home/misza/studia/sem3/pw/PageRank/src/sha256IdGenerator.hpp
 

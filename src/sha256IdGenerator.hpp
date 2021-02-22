@@ -1,6 +1,7 @@
 #ifndef SRC_SHA256IDGENERATOR_HPP_
 #define SRC_SHA256IDGENERATOR_HPP_
 
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -15,8 +16,8 @@ public:
     {
         // Creating pipes for input and output of sha256sum
         int input_pipe[2], output_pipe[2];
-        ASSERT(pipe(input_pipe) != -1, "Failure in pipe() in generateId().");
-        ASSERT(pipe(output_pipe) != -1, "Failure in pipe() in generateId().");
+        ASSERT(pipe2(input_pipe, O_CLOEXEC) != -1, "Failure in pipe() in generateId().");
+        ASSERT(pipe2(output_pipe, O_CLOEXEC) != -1, "Failure in pipe() in generateId().");
 
         int pid = fork();
         ASSERT(pid != -1, "Failure in fork() in generateId().");

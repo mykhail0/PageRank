@@ -1,1 +1,0 @@
-Dodac wyliczanie vectora do singleThread wtw difference < tolerance

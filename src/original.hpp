@@ -2,7 +2,6 @@
 #define SRC_SINGLETHREADEDPAGERANKCOMPUTER_HPP_
 
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "immutable/network.hpp"
@@ -17,7 +16,7 @@ public:
     {
         std::unordered_map<PageId, PageRank, PageIdHash> pageHashMap;
         std::unordered_map<PageId, uint32_t, PageIdHash> numLinks;
-        std::unordered_set<PageId, PageIdHash> danglingNodes;
+        std::vector<PageId> danglingNodes;
         std::unordered_map<PageId, std::vector<PageId>, PageIdHash> edges;
 
         for (auto const& page : network.getPages()) {
@@ -30,7 +29,7 @@ public:
             pageHashMap[page_id] = 1.0 / network.getSize();
             numLinks[page_id] = links_sz;
             if (links_sz == 0)
-                danglingNodes.insert(page_id);
+                danglingNodes.push_back(page_id);
             for (auto link : page_links)
                 edges[link].push_back(page_id);
         }
@@ -41,9 +40,9 @@ public:
             double dangleSum, difference;
             dangleSum = difference = 0;
 
-            for (auto danglingNode : danglingNodes)
+            for (auto const& danglingNode : danglingNodes)
                 dangleSum += previousPageHashMap[danglingNode];
-            dangleSum = dangleSum * alpha;
+            dangleSum *= alpha;
 
             for (auto& pageMapElem : pageHashMap) {
                 PageId pageId = pageMapElem.first;
@@ -52,7 +51,7 @@ public:
                 pageMapElem.second = dangleSum * danglingWeight + (1.0 - alpha) / network.getSize();
 
                 if (edges.count(pageId) > 0) {
-                    for (auto link : edges[pageId])
+                    for (auto const& link : edges[pageId])
                         pageMapElem.second += alpha * previousPageHashMap[link] / numLinks[link];
                 }
                 difference += std::abs(previousPageHashMap[pageId] - pageHashMap[pageId]);

@@ -1,4 +1,4 @@
-# Install script for directory: /home/misza/studia/sem3/pw/projekt++/PageRank/tests
+# Install script for directory: /home/misza/studia/sem3/pw/PageRank/tests
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
