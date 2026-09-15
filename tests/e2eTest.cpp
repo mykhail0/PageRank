@@ -38,7 +38,7 @@ int main(int argc, char** argv)
     // Prepare computer
     std::shared_ptr<PageRankComputer> computerPtr;
     if (argc == 1) {
-        computerPtr = std::shared_ptr<PageRankComputer>(new SingleThreadedPageRankComputer {});
+        computerPtr = std::shared_ptr<PageRankComputer>(new SingleThreadedPageRankComputer { });
     } else {
         uint32_t numThreads;
         std::stringstream(argv[1]) >> numThreads;

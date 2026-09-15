@@ -11,7 +11,7 @@
 
 class SingleThreadedPageRankComputer : public PageRankComputer {
 public:
-    SingleThreadedPageRankComputer() {};
+    SingleThreadedPageRankComputer() { };
 
     std::vector<PageIdAndRank> computeForNetwork(Network const& network, double alpha, uint32_t iterations, double tolerance) const
     {

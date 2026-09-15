@@ -1,0 +1,12 @@
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+tests/CMakeFiles
+tests/Makefile
+tests/cmake_install.cmake
+tests/e2eTest
+tests/pageRankCalculationTest
+tests/pageRankPerformanceTest
+tests/sha256Test
+README.html

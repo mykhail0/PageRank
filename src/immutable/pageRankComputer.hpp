@@ -8,7 +8,7 @@
 
 class PageRankComputer {
 public:
-    PageRankComputer() {};
+    PageRankComputer() { };
 
     virtual std::vector<PageIdAndRank> computeForNetwork(Network const&, double alpha, uint32_t iterations, double tolerance) const = 0;
 

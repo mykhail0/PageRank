@@ -29,7 +29,7 @@ class PageIdHash {
 public:
     std::size_t operator()(PageId const& pageId) const
     {
-        return std::hash<std::string> {}(pageId.id);
+        return std::hash<std::string> { }(pageId.id);
     };
 };
 

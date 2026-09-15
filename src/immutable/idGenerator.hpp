@@ -9,7 +9,7 @@ class IdGenerator {
 public:
     virtual PageId generateId(std::string const& content) const = 0;
 
-    virtual ~IdGenerator() {};
+    virtual ~IdGenerator() { };
 };
 
 #endif /* SRC_IMMUTABLE_IDGENERATOR_HPP_ */
