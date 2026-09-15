@@ -21,7 +21,7 @@ to related contents. The system is "content-addressable", so each link is just
 a SHA256 hash of a linked page's content. All pages make a `Network`. The task
 is to calculate PageRank (PR) for every page, using the following formula:
 
-(assets/formula.svg)
+![PageRank formula](assets/formula.svg)
 
 Where:
 
